@@ -12,7 +12,7 @@
             --card-bg: #131d31;
             --card-border: #1e293b;
             --accent-color: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.3);
+            --accent-glow: rgba(56, 189, 248, 0.25);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
         }
@@ -53,10 +53,10 @@
             margin: 0;
         }
 
-        /* Cuadrícula adaptable de estaciones */
+        /* Cuadrícula de estaciones */
         .grid-stations {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
             gap: 20px;
         }
 
@@ -64,44 +64,45 @@
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 20px;
+            padding: 20px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
-            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            gap: 12px;
+            transition: all 0.2s ease;
             position: relative;
-            overflow: hidden;
         }
 
         .station-card:hover {
-            transform: translateY(-4px);
             border-color: var(--accent-color);
+            transform: translateY(-2px);
         }
 
         .station-card.playing {
             border-color: var(--accent-color);
             box-shadow: 0 0 20px var(--accent-glow);
+            background-color: #17233d;
         }
 
+        /* Contenedor del logo ajustado para que NO recorte */
         .logo-container {
-            width: 90px;
-            height: 90px;
-            background: #0f172a;
-            border-radius: 50%;
+            width: 110px;
+            height: 80px;
+            background: #090d16;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 10px;
-            border: 2px solid var(--card-border);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            padding: 8px;
+            border: 1px solid var(--card-border);
+            box-sizing: border-box;
         }
 
         .station-logo {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain;
-            border-radius: 50%;
+            object-fit: contain; /* Ajusta la imagen completa sin recortar */
+            display: block;
         }
 
         .station-info {
@@ -111,32 +112,96 @@
 
         .station-name {
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .status {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         .station-card.playing .status {
             color: #34d399;
-            font-weight: 600;
         }
 
-        audio {
+        /* Reproductor Custom Estilizado */
+        .custom-player {
             width: 100%;
-            height: 36px;
-            border-radius: 8px;
-            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 30px;
+            padding: 6px 14px;
+            box-sizing: border-box;
+            margin-top: 4px;
         }
 
-        /* Personalización sutil para navegadores basados en WebKit */
-        audio::-webkit-media-controls-panel {
-            background-color: #1e293b;
+        .play-btn {
+            background-color: var(--accent-color);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            background-color: #7dd3fc;
+        }
+
+        .play-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 60%;
+        }
+
+        .volume-icon {
+            width: 14px;
+            height: 14px;
+            fill: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #334155;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -145,14 +210,13 @@
     <div class="container">
         <header>
             <h1>Emisoras en Vivo</h1>
-            <p class="subtitle">Selecciona tu estación favorita. Solo se reproducirá una transmisión a la vez.</p>
+            <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p>
         </header>
 
         <div class="grid-stations" id="stationsGrid"></div>
     </div>
 
     <script>
-        // Lista ordenada alfabéticamente vinculada con su respectivo logo en la raíz
         const stations = [
             { name: "Alfa", url: "https://ddycmnicl95kp.cloudfront.net/live/r0nwiyol2l12/master.m3u8", logo: "alfa.png" },
             { name: "Éxitos 90.9", url: "https://ddycmnicl95kp.cloudfront.net/live/yff15vi5xsxi/master.m3u8", logo: "exitos.png" },
@@ -169,8 +233,14 @@
         ];
 
         const gridContainer = document.getElementById('stationsGrid');
-        const audioElements = [];
-        const cardElements = [];
+        const activeAudios = [];
+        const activeCards = [];
+        const playBtns = [];
+
+        // SVG Icons
+        const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+        const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+        const volIcon = `<svg class="volume-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
 
         stations.forEach((station, index) => {
             const card = document.createElement('div');
@@ -178,56 +248,78 @@
 
             card.innerHTML = `
                 <div class="logo-container">
-                    <img src="${station.logo}" alt="${station.name}" class="station-logo" onerror="this.src='https://via.placeholder.placeholder/90?text=Radio'">
+                    <img src="${station.logo}" alt="${station.name}" class="station-logo" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
                 </div>
                 <div class="station-info">
                     <div class="station-name">${station.name}</div>
-                    <div class="status" id="status-${index}">Listo</div>
+                    <div class="status" id="status-${index}">Conectado</div>
                 </div>
-                <audio id="audio-${index}" controls></audio>
+                
+                <!-- Reproductor HTML5 oculto pero funcional -->
+                <audio id="audio-${index}"></audio>
+
+                <!-- UI de reproductor custom -->
+                <div class="custom-player">
+                    <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
+                    <div class="volume-container">
+                        ${volIcon}
+                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="0.8">
+                    </div>
+                </div>
             `;
 
             gridContainer.appendChild(card);
 
             const audioElement = document.getElementById(`audio-${index}`);
+            const btnElement = document.getElementById(`btn-${index}`);
+            const volElement = document.getElementById(`vol-${index}`);
             const statusSpan = document.getElementById(`status-${index}`);
-            audioElements.push(audioElement);
-            cardElements.push(card);
 
-            // Control de reproducción única y efectos visuales de tarjeta activa
-            audioElement.addEventListener('play', () => {
-                audioElements.forEach((el, i) => {
-                    if (i !== index) {
-                        el.pause();
-                        cardElements[i].classList.remove('playing');
-                    }
-                });
-                card.classList.add('playing');
-                statusSpan.textContent = "Reproduciendo";
-            });
+            activeAudios.push(audioElement);
+            activeCards.push(card);
+            playBtns.push(btnElement);
 
-            audioElement.addEventListener('pause', () => {
-                card.classList.remove('playing');
-                statusSpan.textContent = "Pausado";
-            });
-
-            // Configuración HLS por reproductor
+            // Cargar HLS
             if (Hls.isSupported()) {
                 const hls = new Hls();
                 hls.loadSource(station.url);
                 hls.attachMedia(audioElement);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    statusSpan.textContent = "Conectado";
-                });
                 hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        statusSpan.textContent = "Error de señal";
-                    }
+                    if (data.fatal) statusSpan.textContent = "Error";
                 });
             } else if (audioElement.canPlayType('application/vnd.apple.mpegurl')) {
                 audioElement.src = station.url;
-                statusSpan.textContent = "Conectado (Nativo)";
             }
+
+            // Lógica de Play/Pause con UI personalizada
+            btnElement.addEventListener('click', () => {
+                if (audioElement.paused) {
+                    // Pausar las demás radios
+                    activeAudios.forEach((el, i) => {
+                        if (i !== index) {
+                            el.pause();
+                            activeCards[i].classList.remove('playing');
+                            playBtns[i].innerHTML = playIcon;
+                            document.getElementById(`status-${i}`).textContent = "Conectado";
+                        }
+                    });
+
+                    audioElement.play();
+                    card.classList.add('playing');
+                    btnElement.innerHTML = pauseIcon;
+                    statusSpan.textContent = "Reproduciendo";
+                } else {
+                    audioElement.pause();
+                    card.classList.remove('playing');
+                    btnElement.innerHTML = playIcon;
+                    statusSpan.textContent = "Pausado";
+                }
+            });
+
+            // Control de volumen
+            volElement.addEventListener('input', (e) => {
+                audioElement.volume = e.target.value;
+            });
         });
     </script>
 </body>
