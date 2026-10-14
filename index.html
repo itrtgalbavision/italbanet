@@ -5,12 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radios en Vivo - Streaming Player</title>
     
-    <!-- Configuración para PWA / Instalación en móviles -->
+    <!-- Configuración para Android / PWA -->
     <link rel="manifest" href="manifest.json">
+    
+    <!-- Configuración para iOS / iPhone -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Radios en Vivo">
+    <meta name="apple-mobile-web-app-title" content="Radios">
+
+    <!-- Iconos para iOS / iPhone (Múltiples tamaños para compatibilidad) -->
     <link rel="apple-touch-icon" href="alfa.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="alfa.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="alfa.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="alfa.png">
 
     <!-- Importar Hls.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -93,7 +100,7 @@
             background-color: #17233d;
         }
 
-        /* Contenedor del logo ajustado para que NO recorte */
+        /* Contenedor del logo ajustado para no recortar */
         .logo-container {
             width: 110px;
             height: 80px;
@@ -110,7 +117,7 @@
         .station-logo {
             max-width: 100%;
             max-height: 100%;
-            object-fit: contain; /* Ajusta la imagen completa sin recortar */
+            object-fit: contain;
             display: block;
         }
 
