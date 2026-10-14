@@ -3,137 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor de Audio HLS</title>
+    <title>Radios en Vivo - HLS</title>
+    <!-- Importar Hls.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #0f172a;
             color: #f8fafc;
+            margin: 0;
+            padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
         }
-        .player-card {
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: #38bdf8;
+        }
+        .station-card {
             background-color: #1e293b;
             border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 24px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-        }
-        .header {
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+        .station-header {
+            display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .live-badge {
-            display: flex;
             align-items: center;
-            gap: 6px;
-            background-color: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
         }
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #ef4444;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
+        .station-name {
+            font-weight: 600;
+            font-size: 1rem;
         }
         audio {
             width: 100%;
-            margin-top: 10px;
+            height: 35px;
         }
-        .status-msg {
-            font-size: 0.85rem;
+        .status {
+            font-size: 0.75rem;
             color: #94a3b8;
-            margin-top: 12px;
-            text-align: center;
-            min-height: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div class="player-card">
-        <div class="header">
-            <h2 class="title">Señal en Vivo</h2>
-            <div class="live-badge">
-                <span class="live-dot"></span> En vivo
-            </div>
-        </div>
-
-        <!-- Usamos un elemento de audio en lugar de video ya que es una transmisión de radio/audio -->
-        <audio id="audioPlayer" controls></audio>
-        
-        <div id="status" class="status-msg">Conectando al streaming...</div>
+    <div class="container">
+        <h1>Radios en Vivo</h1>
+        <div id="stationsList"></div>
     </div>
 
-    <!-- Librería hls.js -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
-        const audio = document.getElementById('audioPlayer');
-        const statusDiv = document.getElementById('status');
-        const streamUrl = 'https://ddycmnicl95kp.cloudfront.net/live/5hic8sbcobol/master.m3u8';
+        // Lista ordenada alfabéticamente
+        const stations = [
+            { name: "Alfa", url: "https://ddycmnicl95kp.cloudfront.net/live/r0nwiyol2l12/master.m3u8" },
+            { name: "Exitos 90.9", url: "https://ddycmnicl95kp.cloudfront.net/live/yff15vi5xsxi/master.m3u8" },
+            { name: "Exitos 107.1", url: "https://ddycmnicl95kp.cloudfront.net/live/vk54lkazkyxg/master.m3u8" },
+            { name: "Extrema", url: "https://ddycmnicl95kp.cloudfront.net/live/8bp8yay2zaog/master.m3u8" },
+            { name: "Fiesta FM", url: "https://ddycmnicl95kp.cloudfront.net/live/h8fdwk021ch2/master.m3u8" },
+            { name: "Flix 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8" },
+            { name: "Galaxia", url: "https://ddycmnicl95kp.cloudfront.net/live/3r10218cqvb6/master.m3u8" },
+            { name: "Joya", url: "https://ddycmnicl95kp.cloudfront.net/live/5zgdqpigoa9d/master.m3u8" },
+            { name: "La Marca", url: "https://ddycmnicl95kp.cloudfront.net/live/x9til9l95v7l/master.m3u8" },
+            { name: "Ranchera", url: "https://ddycmnicl95kp.cloudfront.net/live/051kh1xde9ws/master.m3u8" },
+            { name: "Sonora", url: "https://ddycmnicl95kp.cloudfront.net/live/6on6zmhisqhm/master.m3u8" },
+            { name: "Tropicálida", url: "https://ddycmnicl95kp.cloudfront.net/live/5hic8sbcobol/master.m3u8" }
+        ];
 
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(streamUrl);
-            hls.attachMedia(audio);
+        const listContainer = document.getElementById('stationsList');
+        const audioElements = [];
 
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                statusDiv.textContent = "Transmisión lista. Haz clic en reproducir.";
-                // Nota: Los navegadores modernos bloquean el autoplay con sonido, 
-                // por lo que el usuario suele tener que dar Play manualmente.
-            });
+        stations.forEach((station, index) => {
+            // Crear elementos HTML para cada estación
+            const card = document.createElement('div');
+            card.className = 'station-card';
 
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            statusDiv.textContent = "Error de red. Intentando reconectar...";
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            statusDiv.textContent = "Error de medios. Recuperando...";
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            statusDiv.textContent = "Error crítico de reproducción (posible bloqueo CORS).";
-                            hls.destroy();
-                            break;
+            card.innerHTML = `
+                <div class="station-header">
+                    <span class="station-name">${station.name}</span>
+                    <span class="status" id="status-${index}">Listo</span>
+                </div>
+                <audio id="audio-${index}" controls></audio>
+            `;
+
+            listContainer.appendChild(card);
+
+            const audioElement = document.getElementById(`audio-${index}`);
+            const statusSpan = document.getElementById(`status-${index}`);
+            audioElements.push(audioElement);
+
+            // Lógica para pausar las demás cuando una empieza a sonar
+            audioElement.addEventListener('play', () => {
+                audioElements.forEach((el, i) => {
+                    if (i !== index) {
+                        el.pause();
                     }
-                }
+                });
             });
-        } 
-        // Compatibilidad nativa (ej. Safari)
-        else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-            audio.src = streamUrl;
-            audio.addEventListener('loadedmetadata', function () {
-                statusDiv.textContent = "Listo para reproducir.";
-            });
-        } else {
-            statusDiv.textContent = "Tu navegador no soporta reproducción HLS.";
-        }
+
+            // Configurar HLS para cada reproductor
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(station.url);
+                hls.attachMedia(audioElement);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    statusSpan.textContent = "Conectado";
+                });
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        statusSpan.textContent = "Error de señal";
+                    }
+                });
+            } else if (audioElement.canPlayType('application/vnd.apple.mpegurl')) {
+                // Soporte nativo (Safari / iOS)
+                audioElement.src = station.url;
+                statusSpan.textContent = "Conectado (Nativo)";
+            }
+        });
     </script>
 </body>
 </html>
