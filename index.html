@@ -1,23 +1,20 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-<!-- Enlace al manifiesto para Android y navegadores de escritorio -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Configuraciones especiales para iOS / iPhone -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Radios en Vivo">
-    <!-- Icono específico para cuando se agregue a la pantalla de inicio en iPhone -->
-    <link rel="apple-touch-icon" href="alfa.png">
-
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radios en Vivo - Streaming Player</title>
+    
+    <!-- Configuración para PWA / Instalación en móviles -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Radios en Vivo">
+    <link rel="apple-touch-icon" href="alfa.png">
+
     <!-- Importar Hls.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -267,7 +264,7 @@
                     <div class="status" id="status-${index}">Conectado</div>
                 </div>
                 
-                <!-- Reproductor HTML5 oculto pero funcional -->
+                <!-- Reproductor HTML5 -->
                 <audio id="audio-${index}"></audio>
 
                 <!-- UI de reproductor custom -->
@@ -275,7 +272,7 @@
                     <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
                     <div class="volume-container">
                         ${volIcon}
-                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="1.0">
+                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="1">
                     </div>
                 </div>
             `;
@@ -286,6 +283,9 @@
             const btnElement = document.getElementById(`btn-${index}`);
             const volElement = document.getElementById(`vol-${index}`);
             const statusSpan = document.getElementById(`status-${index}`);
+
+            // Volumen inicial al 100%
+            audioElement.volume = 1.0;
 
             activeAudios.push(audioElement);
             activeCards.push(card);
