@@ -147,6 +147,27 @@
             overflow: hidden;
         }
 
+        /* Fondo de marca de agua con el logo de la radio */
+        .station-card::before {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            width: 110px;
+            height: 110px;
+            background-image: var(--card-bg-logo);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom right;
+            opacity: 0.05;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .station-card.playing::before {
+            opacity: 0.12; /* Un poco más visible al reproducir */
+        }
+
         .station-card.playing {
             border-color: var(--accent-color);
             box-shadow: 0 0 20px var(--accent-glow);
@@ -163,6 +184,8 @@
             align-items: center;
             padding: 6px;
             border: 1px solid var(--card-border);
+            position: relative;
+            z-index: 2;
         }
 
         .station-logo {
@@ -174,6 +197,8 @@
         .station-info {
             text-align: center;
             width: 100%;
+            position: relative;
+            z-index: 2;
         }
 
         .station-name {
@@ -209,6 +234,8 @@
             padding: 6px 12px;
             box-sizing: border-box;
             gap: 8px;
+            position: relative;
+            z-index: 2;
         }
 
         .play-btn {
@@ -402,6 +429,9 @@
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
+            // Asignamos una propiedad CSS personalizada por tarjeta para cargar su respectivo logo de fondo como marca de agua
+            card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
+
             card.innerHTML = `
                 <div class="logo-container">
                     <img src="${station.logo}" alt="${station.name}" class="station-logo" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
@@ -429,7 +459,6 @@
             playBtns.push(playBtn);
             statusSpans.push(status);
 
-            // Inicialización de HLS
             initHlsPlayer(index);
 
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
@@ -451,6 +480,7 @@
                 syncUI();
                 status.textContent = 'En vivo';
                 floatingStatus.textContent = 'En vivo';
+                updateMediaSession(index);
             });
 
             audio.addEventListener('pause', () => syncUI());
@@ -490,19 +520,46 @@
             }
         }
 
+        // Función para actualizar los metadatos y mostrar el logo en miniatura en la pantalla de bloqueo
+        function updateMediaSession(index) {
+            if ('mediaSession' in navigator) {
+                const station = stations[index];
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: station.name,
+                    artist: 'Radios Streaming - Guatemala',
+                    album: 'LMB Desing',
+                    artwork: [
+                        { src: station.logo, sizes: '96x96', type: 'image/png' },
+                        { src: station.logo, sizes: '128x128', type: 'image/png' },
+                        { src: station.logo, sizes: '192x192', type: 'image/png' },
+                        { src: station.logo, sizes: '512x512', type: 'image/png' }
+                    ]
+                });
+
+                // Control multimedia desde la pantalla de bloqueo o auriculares
+                navigator.mediaSession.setActionHandler('play', () => {
+                    handlePlayTrigger(index);
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    stopStationAndReset(index);
+                });
+                navigator.mediaSession.setActionHandler('stop', () => {
+                    stopStationAndReset(index);
+                });
+            }
+        }
+
         async function handlePlayTrigger(index) {
             initAudioContext();
             setupWebAudioGain(index);
 
             const targetAudio = activeAudios[index];
 
-            // SI SE PRESIONA PAUSA: Detener transmisión y limpiar el punto de reproducción
             if (currentPlayingIndex === index && !targetAudio.paused) {
                 stopStationAndReset(index);
                 return;
             }
 
-            // Detener y resetear cualquier otra emisora previamente activa
             activeAudios.forEach((aud, i) => { 
                 if (i !== index && !aud.paused) {
                     stopStationAndReset(i);
@@ -513,7 +570,6 @@
             statusSpans[index].textContent = 'Conectando…';
             floatingStatus.textContent = 'Conectando…';
 
-            // Cargar y forzar el borde del directo en tiempo real (Live Edge)
             if (hlsPlayers[index]) {
                 hlsPlayers[index].stopLoad();
                 hlsPlayers[index].detachMedia();
@@ -527,12 +583,12 @@
 
             try {
                 await targetAudio.play();
+                updateMediaSession(index);
             } catch (err) {
                 statusSpans[index].textContent = 'Error al conectar';
             }
         }
 
-        // Función para detener y destruir el buffer al pausar
         function stopStationAndReset(index) {
             const audio = activeAudios[index];
             audio.pause();
