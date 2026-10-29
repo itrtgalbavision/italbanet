@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radios Streaming - LMB Desing</title>
 
     <!-- Configuración PWA / GitHub Pages -->
@@ -14,10 +14,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Radios">
 
-    <!-- Icono personalizado de la pantalla de inicio -->
+    <!-- Iconos -->
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=2">
-
-    <!-- Icono del navegador -->
     <link rel="icon" type="image/png" href="./icon.png?v=2">
 
     <!-- Importar Hls.js -->
@@ -39,12 +37,12 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 30px 20px 110px 20px; /* Padding inferior para el reproductor flotante */
+            padding: 20px 15px 100px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .container {
@@ -54,12 +52,12 @@
 
         header {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         h1 {
-            font-size: 2rem;
-            margin: 0 0 8px 0;
+            font-size: 1.8rem;
+            margin: 0 0 6px 0;
             background: linear-gradient(135deg, #38bdf8, #818cf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -67,17 +65,17 @@
 
         p.subtitle {
             color: var(--text-muted);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             margin: 0;
         }
 
-        /* Buscador y Control de Acciones */
+        /* Buscador y Botón de Actualizar */
         .controls-container {
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             width: 100%;
             max-width: 550px;
             margin-left: auto;
@@ -89,7 +87,7 @@
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 25px;
-            padding: 12px 20px;
+            padding: 12px 18px;
             color: var(--text-main);
             font-size: 0.95rem;
             outline: none;
@@ -100,13 +98,12 @@
             border-color: var(--accent-color);
         }
 
-        /* Botón de actualizar página */
         .refresh-btn {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             color: var(--text-main);
             border-radius: 25px;
-            padding: 10px 18px;
+            padding: 11px 18px;
             font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
@@ -115,37 +112,32 @@
             gap: 8px;
             transition: all 0.2s ease;
             white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .refresh-btn:hover {
-            border-color: var(--accent-color);
+        .refresh-btn:active {
+            transform: scale(0.96);
             background-color: #17233d;
-            color: var(--accent-color);
         }
 
         .refresh-btn svg {
             width: 16px;
             height: 16px;
             fill: currentColor;
-            transition: transform 0.4s ease;
-        }
-
-        .refresh-btn.rotating svg {
-            transform: rotate(360deg);
         }
 
         /* Cuadrícula de estaciones */
         .grid-stations {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            gap: 20px;
+            gap: 16px;
         }
 
         .station-card {
             background-color: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 20px 16px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -155,59 +147,28 @@
             overflow: hidden;
         }
 
-        /* Fondo borroso con el logo al reproducir */
-        .station-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: var(--bg-logo);
-            background-size: cover;
-            background-position: center;
-            opacity: 0.05;
-            filter: blur(15px);
-            z-index: 0;
-            transition: opacity 0.3s;
-        }
-
-        .station-card:hover {
-            border-color: var(--accent-color);
-            transform: translateY(-2px);
-        }
-
         .station-card.playing {
             border-color: var(--accent-color);
             box-shadow: 0 0 20px var(--accent-glow);
             background-color: #17233d;
         }
 
-        .station-card.playing::before {
-            opacity: 0.15;
-        }
-
-        .station-card > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Contenedor del logo */
         .logo-container {
-            width: 110px;
-            height: 80px;
+            width: 100px;
+            height: 75px;
             background: #090d16;
             border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 8px;
+            padding: 6px;
             border: 1px solid var(--card-border);
-            box-sizing: border-box;
         }
 
         .station-logo {
             max-width: 100%;
             max-height: 100%;
             object-fit: contain;
-            display: block;
         }
 
         .station-info {
@@ -217,8 +178,8 @@
 
         .station-name {
             font-weight: 700;
-            font-size: 1.05rem;
-            margin-bottom: 4px;
+            font-size: 1rem;
+            margin-bottom: 3px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -236,7 +197,7 @@
             color: #34d399;
         }
 
-        /* Reproductor Custom Estilizado */
+        /* Controles de reproducción y volumen optimizados */
         .custom-player {
             width: 100%;
             display: flex;
@@ -245,101 +206,82 @@
             background-color: #0f172a;
             border: 1px solid #1e293b;
             border-radius: 30px;
-            padding: 6px 14px;
+            padding: 6px 12px;
             box-sizing: border-box;
-            margin-top: 4px;
+            gap: 8px;
         }
 
         .play-btn {
             background-color: var(--accent-color);
             border: none;
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             color: #0f172a;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            transition: transform 0.1s ease, background-color 0.2s ease;
             flex-shrink: 0;
-        }
-
-        .play-btn:hover {
-            transform: scale(1.05);
-            background-color: #7dd3fc;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .play-btn svg {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             fill: currentColor;
         }
 
-        .volume-container {
+        /* Botones táctiles de volumen rápido para móviles */
+        .vol-btn-group {
             display: flex;
             align-items: center;
-            gap: 8px;
-            width: 65%;
+            gap: 4px;
+            background: #1e293b;
+            padding: 3px;
+            border-radius: 20px;
         }
 
-        .vol-btn {
-            background: none;
+        .vol-step-btn {
+            background: transparent;
             border: none;
-            padding: 6px;
-            margin: 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: var(--text-muted);
-            transition: color 0.2s ease, transform 0.1s ease;
-            border-radius: 50%;
-        }
-
-        .vol-btn:hover, .vol-btn:active {
-            color: var(--accent-color);
-        }
-
-        .volume-icon {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-            flex-shrink: 0;
-        }
-
-        .volume-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: #334155;
-            outline: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 14px;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
+        .vol-step-btn.active {
             background: var(--accent-color);
-            cursor: pointer;
-            box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+            color: #0f172a;
         }
 
-        .volume-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: pointer;
+        .vol-mute-btn {
+            background: transparent;
             border: none;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            padding: 6px;
+            cursor: pointer;
+            border-radius: 50%;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Barra Mini Player Inferior Opcional */
+        .vol-mute-btn.muted {
+            color: #f43f5e;
+        }
+
+        .vol-mute-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Player Flotante Inferior */
         .floating-player {
             position: fixed;
             bottom: 0;
@@ -348,7 +290,7 @@
             background: rgba(15, 23, 42, 0.96);
             backdrop-filter: blur(12px);
             border-top: 1px solid var(--card-border);
-            padding: 10px 20px;
+            padding: 10px 16px;
             box-sizing: border-box;
             display: none;
             justify-content: space-between;
@@ -363,32 +305,21 @@
         .floating-info {
             display: flex;
             align-items: center;
-            gap: 12px;
-            min-width: 0;
+            gap: 10px;
         }
 
         .floating-logo {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             object-fit: contain;
             background: #000;
             border-radius: 8px;
-            padding: 4px;
-            flex-shrink: 0;
-        }
-
-        .floating-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            padding: 3px;
         }
 
         .floating-text .title {
             font-weight: 700;
-            font-size: 0.95rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.9rem;
         }
 
         .floating-text .desc {
@@ -396,28 +327,13 @@
             color: #34d399;
         }
 
-        .floating-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-
-        .floating-controls .volume-container {
-            width: 110px;
-        }
-
-        @media (max-width: 600px) {
+        @media (max-width: 480px) {
             .controls-container {
                 flex-direction: column;
-                gap: 10px;
             }
             .search-input, .refresh-btn {
                 width: 100%;
                 justify-content: center;
-            }
-            .floating-controls .volume-container {
-                width: 85px;
             }
         }
     </style>
@@ -430,38 +346,28 @@
             <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p>
         </header>
 
-        <!-- Buscador y Botón de Actualizar -->
         <div class="controls-container">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora...">
-            <button id="refreshBtn" class="refresh-btn" title="Actualizar Señal / Página">
+            <button id="refreshBtn" class="refresh-btn" title="Actualizar Señal">
                 <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Actualizar
+                Actualizar Página
             </button>
         </div>
 
         <div class="grid-stations" id="stationsGrid"></div>
     </div>
 
-    <!-- Mini Barra Flotante inferior -->
     <div class="floating-player" id="floatingPlayer">
         <div class="floating-info">
             <img id="floatingLogo" src="" alt="" class="floating-logo">
             <div class="floating-text">
-                <div class="title" id="floatingTitle">Ninguna reproducción</div>
+                <div class="title" id="floatingTitle">Sin selección</div>
                 <div class="desc" id="floatingStatus">En vivo</div>
             </div>
         </div>
-        <div class="floating-controls">
-            <div class="volume-container">
-                <button class="vol-btn" id="floatingVolBtn" title="Silenciar / Activar sonido" aria-label="Silenciar">
-                    <svg class="volume-icon" viewBox="0 0 24 24"></svg>
-                </button>
-                <input type="range" class="volume-slider" id="floatingVolSlider" min="0" max="1" step="0.05" value="1" aria-label="Volumen Flotante">
-            </div>
-            <button class="play-btn" id="floatingPlayBtn" title="Play/Pause">
-                <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-        </div>
+        <button class="play-btn" id="floatingPlayBtn" title="Play/Pause">
+            <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
     </div>
 
     <script>
@@ -485,419 +391,212 @@
         const activeCards = [];
         const playBtns = [];
         const statusSpans = [];
-        const volumeSliders = [];
-        const volumeBtns = [];
-        const lastNonZeroVolumes = [];
-        const gainNodes = [];
         const hlsPlayers = [];
+        const gainNodes = [];
         let audioCtx = null;
         let currentPlayingIndex = -1;
 
-        // SVG Icons
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-        
-        // Dynamic Volume Icons
-        const volHighIcon = `<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>`;
-        const volLowIcon = `<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>`;
-        const volMuteIcon = `<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>`;
+        const iconVolHigh = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+        const iconMute = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
 
         const floatingPlayer = document.getElementById('floatingPlayer');
         const floatingPlayBtn = document.getElementById('floatingPlayBtn');
         const floatingTitle = document.getElementById('floatingTitle');
         const floatingStatus = document.getElementById('floatingStatus');
         const floatingLogo = document.getElementById('floatingLogo');
-        const floatingVolBtn = document.getElementById('floatingVolBtn');
-        const floatingVolSlider = document.getElementById('floatingVolSlider');
 
-        // Initialize Web Audio API AudioContext for iOS Volume Control Support
+        // Inicializar contexto Web Audio API con gesto táctil móvil
         function initAudioContext() {
             if (!audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) {
-                    audioCtx = new AudioContextClass();
-                }
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
             }
-            if (audioCtx && audioCtx.state === 'suspended') {
+            if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
         }
 
-        // Setup Web Audio API gain node wrapper for an audio element
-        function attachWebAudioGain(audioElement, index) {
-            initAudioContext();
-            if (!audioCtx || gainNodes[index]) return;
-
-            try {
-                const source = audioCtx.createMediaElementSource(audioElement);
-                const gainNode = audioCtx.createGain();
-                source.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                gainNodes[index] = gainNode;
-            } catch (err) {
-                console.debug('Web Audio API Node link error:', err);
-            }
-        }
-
-        // Render Stations
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
-            card.style.setProperty('--bg-logo', `url('${station.logo}')`);
-            card.setAttribute('data-name', station.name.toLowerCase());
             card.innerHTML = `
                 <div class="logo-container">
                     <img src="${station.logo}" alt="${station.name}" class="station-logo" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
                 </div>
                 <div class="station-info">
                     <div class="station-name">${station.name}</div>
-                    <div class="status" id="status-${index}">Conectado</div>
+                    <div class="status" id="status-${index}">Listo</div>
                 </div>
                 <audio id="audio-${index}" crossorigin="anonymous" preload="none"></audio>
                 <div class="custom-player">
-                    <button class="play-btn" id="btn-${index}" title="Reproducir" aria-label="Reproducir ${station.name}">${playIcon}</button>
-                    <div class="volume-container">
-                        <button class="vol-btn" id="volBtn-${index}" title="Silenciar / Activar sonido" aria-label="Silenciar ${station.name}">
-                            <svg class="volume-icon" viewBox="0 0 24 24">${volHighIcon}</svg>
-                        </button>
-                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.02" value="1" aria-label="Volumen de ${station.name}">
+                    <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
+                    <div class="vol-btn-group">
+                        <button class="vol-mute-btn" id="mute-${index}" title="Silenciar">${iconVolHigh}</button>
+                        <button class="vol-step-btn active" data-vol="1.0">100%</button>
+                        <button class="vol-step-btn" data-vol="0.5">50%</button>
                     </div>
                 </div>`;
             gridContainer.appendChild(card);
 
             const audio = card.querySelector('audio');
-            const button = card.querySelector('.play-btn');
-            const volume = card.querySelector('.volume-slider');
-            const volBtn = card.querySelector('.vol-btn');
+            const playBtn = card.querySelector('.play-btn');
             const status = card.querySelector('.status');
+            const muteBtn = card.querySelector('.vol-mute-btn');
+            const stepBtns = card.querySelectorAll('.vol-step-btn');
 
-            audio.volume = 1;
-            lastNonZeroVolumes.push(1);
             activeAudios.push(audio);
             activeCards.push(card);
-            playBtns.push(button);
+            playBtns.push(playBtn);
             statusSpans.push(status);
-            volumeSliders.push(volume);
-            volumeBtns.push(volBtn);
 
-            // Setup HLS
+            // Cargar motor HLS
             if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({
-                    liveSyncDurationCount: 3,
-                    maxLiveSyncPlaybackRate: 1.1,
-                    enableWorker: true
-                });
+                const hls = new Hls({ liveSyncDurationCount: 2, maxLiveSyncPlaybackRate: 1.1 });
                 hls.loadSource(station.url);
                 hls.attachMedia(audio);
-                hls.on(Hls.Events.ERROR, (_event, data) => {
-                    if (data.fatal) {
-                        status.textContent = 'Error de transmisión';
-                        if (currentPlayingIndex === index) floatingStatus.textContent = 'Error de transmisión';
-                        hls.destroy();
-                    }
-                });
                 hlsPlayers[index] = hls;
             } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
                 audio.src = station.url;
             }
 
-            // Click Play / Pause Card
-            button.addEventListener('click', () => {
+            // Manejo de eventos táctiles y clics
+            playBtn.addEventListener('click', () => handlePlayTrigger(index));
+
+            // Ajuste de ganancia para móviles
+            stepBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    initAudioContext();
+                    setupWebAudioGain(index);
+                    const volValue = parseFloat(btn.getAttribute('data-vol'));
+                    
+                    if (gainNodes[index]) {
+                        gainNodes[index].gain.setValueAtTime(volValue, audioCtx.currentTime);
+                    }
+                    audio.volume = volValue;
+
+                    stepBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    muteBtn.classList.remove('muted');
+                    muteBtn.innerHTML = iconVolHigh;
+                });
+            });
+
+            muteBtn.addEventListener('click', () => {
                 initAudioContext();
-                if (currentPlayingIndex === index && !audio.paused) {
-                    pauseStation(index);
-                } else {
-                    playStation(index);
+                setupWebAudioGain(index);
+                const isMuted = muteBtn.classList.toggle('muted');
+
+                if (gainNodes[index]) {
+                    gainNodes[index].gain.setValueAtTime(isMuted ? 0 : 1.0, audioCtx.currentTime);
                 }
+                audio.muted = isMuted;
+                muteBtn.innerHTML = isMuted ? iconMute : iconVolHigh;
             });
 
-            // Volume Slider Event (Handles iOS + Android + PC)
-            volume.addEventListener('input', event => {
-                initAudioContext();
-                const val = Number(event.target.value);
-                setStationVolume(index, val);
-            });
-
-            // Mute / Unmute Toggle Button Event
-            volBtn.addEventListener('click', () => {
-                initAudioContext();
-                toggleMute(index);
-            });
-
-            // Audio Events
             audio.addEventListener('playing', () => {
                 currentPlayingIndex = index;
-                saveCurrentState(index, true);
-                syncInterface();
+                localStorage.setItem('last_played_station', index);
+                syncUI();
                 status.textContent = 'En vivo';
                 floatingStatus.textContent = 'En vivo';
-                updateMediaSession(index);
             });
 
-            audio.addEventListener('play', () => {
-                currentPlayingIndex = index;
-                syncInterface();
-            });
+            audio.addEventListener('pause', () => syncUI());
+        });
 
-            audio.addEventListener('pause', () => {
-                if (currentPlayingIndex === index) {
-                    saveCurrentState(index, false);
+        function setupWebAudioGain(index) {
+            if (!gainNodes[index] && audioCtx) {
+                try {
+                    const source = audioCtx.createMediaElementSource(activeAudios[index]);
+                    const gainNode = audioCtx.createGain();
+                    source.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    gainNodes[index] = gainNode;
+                } catch (e) {
+                    console.debug('WebAudio binding:', e);
                 }
-                syncInterface();
-            });
-
-            audio.addEventListener('waiting', () => {
-                if (currentPlayingIndex === index) {
-                    status.textContent = 'Conectando…';
-                    floatingStatus.textContent = 'Conectando…';
-                }
-            });
-
-            audio.addEventListener('error', () => {
-                status.textContent = 'Error de reproducción';
-                if (currentPlayingIndex === index) floatingStatus.textContent = 'Error de reproducción';
-                syncInterface();
-            });
-        });
-
-        // Volume Control Supporting iOS Safari via GainNode
-        function setStationVolume(index, val) {
-            const audio = activeAudios[index];
-            audio.volume = val; // Works on PC & Android
-
-            // Web Audio API GainNode Control (Works on iOS / iPhone)
-            if (gainNodes[index] && audioCtx) {
-                gainNodes[index].gain.setValueAtTime(val, audioCtx.currentTime);
-            }
-
-            volumeSliders[index].value = val;
-
-            if (val > 0) {
-                lastNonZeroVolumes[index] = val;
-            }
-
-            updateVolumeIcon(index, val);
-
-            // Sync floating volume if this is the active station
-            if (currentPlayingIndex === index) {
-                floatingVolSlider.value = val;
-                updateFloatingVolumeIcon(val);
             }
         }
 
-        function toggleMute(index) {
-            const currentVol = volumeSliders[index].value;
-            if (Number(currentVol) > 0) {
-                setStationVolume(index, 0);
-            } else {
-                const restoreVal = lastNonZeroVolumes[index] || 1;
-                setStationVolume(index, restoreVal);
-            }
-        }
-
-        function updateVolumeIcon(index, val) {
-            const volBtnSvg = volumeBtns[index].querySelector('svg');
-            if (val === 0) {
-                volBtnSvg.innerHTML = volMuteIcon;
-            } else if (val <= 0.5) {
-                volBtnSvg.innerHTML = volLowIcon;
-            } else {
-                volBtnSvg.innerHTML = volHighIcon;
-            }
-        }
-
-        function updateFloatingVolumeIcon(val) {
-            const svg = floatingVolBtn.querySelector('svg');
-            if (val === 0) {
-                svg.innerHTML = volMuteIcon;
-            } else if (val <= 0.5) {
-                svg.innerHTML = volLowIcon;
-            } else {
-                svg.innerHTML = volHighIcon;
-            }
-        }
-
-        // Floating Player Volume Controls
-        floatingVolSlider.addEventListener('input', e => {
+        async function handlePlayTrigger(index) {
             initAudioContext();
-            if (currentPlayingIndex >= 0) {
-                setStationVolume(currentPlayingIndex, Number(e.target.value));
-            }
-        });
+            setupWebAudioGain(index);
 
-        floatingVolBtn.addEventListener('click', () => {
-            initAudioContext();
-            if (currentPlayingIndex >= 0) {
-                toggleMute(currentPlayingIndex);
-            }
-        });
-
-        // Play Station with Live Edge Synchronization
-        async function playStation(index) {
-            initAudioContext();
             const targetAudio = activeAudios[index];
-            const station = stations[index];
+            if (currentPlayingIndex === index && !targetAudio.paused) {
+                targetAudio.pause();
+                return;
+            }
 
-            // Attach Web Audio API gain node for iOS volume compatibility
-            attachWebAudioGain(targetAudio, index);
-
-            // Pause all other stations
-            activeAudios.forEach((audio, i) => {
-                if (i !== index && !audio.paused) audio.pause();
-            });
+            // Detener otras emisoras
+            activeAudios.forEach((aud, i) => { if (i !== index && !aud.paused) aud.pause(); });
 
             currentPlayingIndex = index;
-            syncInterface();
             statusSpans[index].textContent = 'Conectando…';
             floatingStatus.textContent = 'Conectando…';
 
-            // FORCE RE-CONNECT TO LIVE EDGE (No old buffer playback)
+            // Reconexión al punto en vivo (Live Edge)
             if (hlsPlayers[index]) {
-                const hls = hlsPlayers[index];
-                hls.stopLoad();
-                hls.startLoad();
-                if (hls.liveSyncPosition) {
-                    targetAudio.currentTime = hls.liveSyncPosition;
-                }
-            } else if (targetAudio.canPlayType('application/vnd.apple.mpegurl')) {
-                targetAudio.src = station.url + '?t=' + Date.now();
+                hlsPlayers[index].stopLoad();
+                hlsPlayers[index].startLoad();
+            } else {
+                targetAudio.src = stations[index].url + '?t=' + Date.now();
                 targetAudio.load();
             }
 
             try {
                 await targetAudio.play();
-                saveCurrentState(index, true);
-                syncInterface();
-            } catch (error) {
-                console.error('Error al reproducir:', error);
-                statusSpans[index].textContent = 'Haz clic para reproducir';
-                floatingStatus.textContent = 'Interacción requerida';
-                syncInterface();
+            } catch (err) {
+                statusSpans[index].textContent = 'Error al conectar';
             }
         }
 
-        function pauseStation(index) {
-            if (activeAudios[index]) {
-                activeAudios[index].pause();
-                saveCurrentState(index, false);
-            }
-        }
-
-        // Save State in localStorage so Reload Resumes Correctly
-        function saveCurrentState(index, isPlaying) {
-            try {
-                localStorage.setItem('lmb_last_station', index);
-                localStorage.setItem('lmb_was_playing', isPlaying ? 'true' : 'false');
-            } catch (e) {
-                console.debug('Storage error:', e);
-            }
-        }
-
-        // UI Synchronization
-        function syncInterface() {
-            activeAudios.forEach((audio, index) => {
+        function syncUI() {
+            activeAudios.forEach((audio, idx) => {
                 const isPlaying = !audio.paused && !audio.ended;
-                activeCards[index].classList.toggle('playing', isPlaying);
-                playBtns[index].innerHTML = isPlaying ? pauseIcon : playIcon;
-                playBtns[index].title = isPlaying ? 'Pausar' : 'Reproducir';
-                playBtns[index].setAttribute('aria-label', `${isPlaying ? 'Pausar' : 'Reproducir'} ${stations[index].name}`);
+                activeCards[idx].classList.toggle('playing', isPlaying);
+                playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
 
-                if (!isPlaying && (statusSpans[index].textContent === 'En vivo' || statusSpans[index].textContent === 'Reproduciendo')) {
-                    statusSpans[index].textContent = 'Pausado';
+                if (!isPlaying && statusSpans[idx].textContent === 'En vivo') {
+                    statusSpans[idx].textContent = 'Pausado';
                 }
             });
 
-            if (currentPlayingIndex < 0) {
-                floatingPlayer.classList.remove('active');
-                return;
+            if (currentPlayingIndex >= 0) {
+                const isPlaying = !activeAudios[currentPlayingIndex].paused;
+                floatingLogo.src = stations[currentPlayingIndex].logo;
+                floatingTitle.textContent = stations[currentPlayingIndex].name;
+                floatingStatus.textContent = isPlaying ? 'En vivo' : 'Pausado';
+                floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
+                floatingPlayer.classList.add('active');
             }
-
-            const selectedAudio = activeAudios[currentPlayingIndex];
-            const selectedStation = stations[currentPlayingIndex];
-            const isSelectedPlaying = !selectedAudio.paused && !selectedAudio.ended;
-
-            floatingLogo.src = selectedStation.logo;
-            floatingLogo.alt = selectedStation.name;
-            floatingTitle.textContent = selectedStation.name;
-            floatingStatus.textContent = isSelectedPlaying ? 'En vivo' : 'Pausado';
-            floatingPlayBtn.innerHTML = isSelectedPlaying ? pauseIcon : playIcon;
-            floatingPlayBtn.title = isSelectedPlaying ? 'Pausar' : 'Reproducir';
-            
-            // Sync floating player volume
-            const currentVol = volumeSliders[currentPlayingIndex].value;
-            floatingVolSlider.value = currentVol;
-            updateFloatingVolumeIcon(Number(currentVol));
-
-            floatingPlayer.classList.add('active');
         }
 
         floatingPlayBtn.addEventListener('click', () => {
-            initAudioContext();
-            if (currentPlayingIndex < 0) return;
-            const audio = activeAudios[currentPlayingIndex];
-            if (audio.paused) {
-                playStation(currentPlayingIndex);
-            } else {
-                pauseStation(currentPlayingIndex);
-            }
+            if (currentPlayingIndex >= 0) handlePlayTrigger(currentPlayingIndex);
         });
-
-        function updateMediaSession(index) {
-            if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
-            const station = stations[index];
-
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: station.name,
-                artist: 'Radios Streaming - Guatemala',
-                album: 'LMB Desing',
-                artwork: [{ src: station.logo, sizes: '192x192', type: 'image/png' }]
-            });
-
-            try {
-                navigator.mediaSession.setActionHandler('play', () => {
-                    if (currentPlayingIndex >= 0) playStation(currentPlayingIndex);
-                });
-                navigator.mediaSession.setActionHandler('pause', () => {
-                    if (currentPlayingIndex >= 0) pauseStation(currentPlayingIndex);
-                });
-            } catch (error) {
-                console.debug('Media Session no disponible:', error);
-            }
-        }
 
         // Buscador
-        document.getElementById('searchInput').addEventListener('input', event => {
-            const query = event.target.value.toLowerCase().trim();
-            activeCards.forEach((card, index) => {
-                card.style.display = stations[index].name.toLowerCase().includes(query) ? 'flex' : 'none';
+        document.getElementById('searchInput').addEventListener('input', e => {
+            const query = e.target.value.toLowerCase().trim();
+            activeCards.forEach((card, idx) => {
+                card.style.display = stations[idx].name.toLowerCase().includes(query) ? 'flex' : 'none';
             });
         });
 
-        // Botón Actualizar
-        document.getElementById('refreshBtn').addEventListener('click', function() {
-            this.classList.add('rotating');
+        // Actualizar Página manteniendo la estación
+        document.getElementById('refreshBtn').addEventListener('click', () => {
             location.reload();
         });
 
-        // Auto-Resume on Page Load
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedIndex = localStorage.getItem('lmb_last_station');
-            const wasPlaying = localStorage.getItem('lmb_was_playing') === 'true';
-
+        // Auto-resume al recargar si existía una emisora previa
+        window.addEventListener('load', () => {
+            const savedIndex = localStorage.getItem('last_played_station');
             if (savedIndex !== null && stations[savedIndex]) {
                 const idx = parseInt(savedIndex, 10);
-                currentPlayingIndex = idx;
-                syncInterface();
-
-                if (wasPlaying) {
-                    playStation(idx).catch(() => {
-                        statusSpans[idx].textContent = 'Toca para continuar';
-                        floatingStatus.textContent = 'Toca para continuar';
-                    });
-                } else {
-                    statusSpans[idx].textContent = 'Pausado';
-                    floatingStatus.textContent = 'Pausado';
-                }
+                setTimeout(() => handlePlayTrigger(idx), 300);
             }
         });
     </script>
