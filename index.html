@@ -433,7 +433,6 @@
                     <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
                     <div class="vol-btn-group">
                         <button class="vol-mute-btn" id="mute-${index}" title="Silenciar">${iconVolHigh}</button>
-                       
                     </div>
                 </div>`;
             gridContainer.appendChild(card);
@@ -449,8 +448,12 @@
             playBtns.push(playBtn);
             statusSpans.push(status);
 
+            // CONFIGURACIÓN HLS FIJA (Restaurada la estabilidad del código original sin aceleraciones)
             if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({ liveSyncDurationCount: 2, maxLiveSyncPlaybackRate: 1.1 });
+                const hls = new Hls({ 
+                    liveSyncDurationCount: 3, 
+                    maxLiveSyncPlaybackRate: 1.0 
+                });
                 hls.loadSource(station.url);
                 hls.attachMedia(audio);
                 hlsPlayers[index] = hls;
