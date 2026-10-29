@@ -429,7 +429,6 @@
             playBtns.push(playBtn);
             statusSpans.push(status);
 
-            // Inicialización de HLS
             initHlsPlayer(index);
 
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
@@ -451,6 +450,7 @@
                 syncUI();
                 status.textContent = 'En vivo';
                 floatingStatus.textContent = 'En vivo';
+                updateMediaSession(index); // Muestra el logo en la pantalla de bloqueo
             });
 
             audio.addEventListener('pause', () => syncUI());
@@ -496,13 +496,11 @@
 
             const targetAudio = activeAudios[index];
 
-            // SI SE PRESIONA PAUSA: Detener transmisión y limpiar el punto de reproducción
             if (currentPlayingIndex === index && !targetAudio.paused) {
                 stopStationAndReset(index);
                 return;
             }
 
-            // Detener y resetear cualquier otra emisora previamente activa
             activeAudios.forEach((aud, i) => { 
                 if (i !== index && !aud.paused) {
                     stopStationAndReset(i);
@@ -513,7 +511,6 @@
             statusSpans[index].textContent = 'Conectando…';
             floatingStatus.textContent = 'Conectando…';
 
-            // Cargar y forzar el borde del directo en tiempo real (Live Edge)
             if (hlsPlayers[index]) {
                 hlsPlayers[index].stopLoad();
                 hlsPlayers[index].detachMedia();
@@ -527,12 +524,12 @@
 
             try {
                 await targetAudio.play();
+                updateMediaSession(index); // Sincroniza metadatos de bloqueo
             } catch (err) {
                 statusSpans[index].textContent = 'Error al conectar';
             }
         }
 
-        // Función para detener y destruir el buffer al pausar
         function stopStationAndReset(index) {
             const audio = activeAudios[index];
             audio.pause();
@@ -545,6 +542,35 @@
             }
             statusSpans[index].textContent = 'Pausado';
             syncUI();
+        }
+
+        // Función que envía los metadatos y el logo a la pantalla de bloqueo
+        function updateMediaSession(index) {
+            if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+            const station = stations[index];
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: station.name,
+                artist: 'Radios Streaming - Guatemala',
+                album: 'LMB Desing',
+                artwork: [
+                    { src: station.logo, sizes: '96x96', type: 'image/png' },
+                    { src: station.logo, sizes: '128x128', type: 'image/png' },
+                    { src: station.logo, sizes: '192x192', type: 'image/png' },
+                    { src: station.logo, sizes: '512x512', type: 'image/png' }
+                ]
+            });
+
+            try {
+                navigator.mediaSession.setActionHandler('play', () => {
+                    if (currentPlayingIndex >= 0) handlePlayTrigger(currentPlayingIndex);
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    if (currentPlayingIndex >= 0) stopStationAndReset(currentPlayingIndex);
+                });
+            } catch (error) {
+                console.debug('MediaSession actions:', error);
+            }
         }
 
         function syncUI() {
