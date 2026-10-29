@@ -39,11 +39,12 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 30px 20px 100px 20px; /* Padding inferior para el reproductor flotante */
+            padding: 30px 20px 110px 20px; /* Padding inferior para el reproductor flotante */
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container {
@@ -252,8 +253,8 @@
         .play-btn {
             background-color: var(--accent-color);
             border: none;
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             color: #0f172a;
             display: flex;
@@ -285,7 +286,7 @@
         .vol-btn {
             background: none;
             border: none;
-            padding: 0;
+            padding: 6px;
             margin: 0;
             cursor: pointer;
             display: flex;
@@ -293,25 +294,26 @@
             justify-content: center;
             color: var(--text-muted);
             transition: color 0.2s ease, transform 0.1s ease;
+            border-radius: 50%;
         }
 
-        .vol-btn:hover {
+        .vol-btn:hover, .vol-btn:active {
             color: var(--accent-color);
-            transform: scale(1.1);
         }
 
         .volume-icon {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             fill: currentColor;
             flex-shrink: 0;
         }
 
         .volume-slider {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
-            height: 4px;
-            border-radius: 2px;
+            height: 6px;
+            border-radius: 3px;
             background: #334155;
             outline: none;
             cursor: pointer;
@@ -319,11 +321,22 @@
 
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
+            appearance: none;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: var(--accent-color);
             cursor: pointer;
+            box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            border: none;
         }
 
         /* Barra Mini Player Inferior Opcional */
@@ -332,10 +345,10 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(12px);
             border-top: 1px solid var(--card-border);
-            padding: 12px 20px;
+            padding: 10px 20px;
             box-sizing: border-box;
             display: none;
             justify-content: space-between;
@@ -351,20 +364,31 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 0;
         }
 
         .floating-logo {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             object-fit: contain;
             background: #000;
             border-radius: 8px;
             padding: 4px;
+            flex-shrink: 0;
+        }
+
+        .floating-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .floating-text .title {
             font-weight: 700;
             font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .floating-text .desc {
@@ -375,10 +399,15 @@
         .floating-controls {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            flex-shrink: 0;
         }
 
-        @media (max-width: 520px) {
+        .floating-controls .volume-container {
+            width: 110px;
+        }
+
+        @media (max-width: 600px) {
             .controls-container {
                 flex-direction: column;
                 gap: 10px;
@@ -388,7 +417,7 @@
                 justify-content: center;
             }
             .floating-controls .volume-container {
-                display: none;
+                width: 85px;
             }
         }
     </style>
@@ -424,10 +453,10 @@
         </div>
         <div class="floating-controls">
             <div class="volume-container">
-                <button class="vol-btn" id="floatingVolBtn" title="Silenciar / Activar sonido">
+                <button class="vol-btn" id="floatingVolBtn" title="Silenciar / Activar sonido" aria-label="Silenciar">
                     <svg class="volume-icon" viewBox="0 0 24 24"></svg>
                 </button>
-                <input type="range" class="volume-slider" id="floatingVolSlider" min="0" max="1" step="0.05" value="1">
+                <input type="range" class="volume-slider" id="floatingVolSlider" min="0" max="1" step="0.05" value="1" aria-label="Volumen Flotante">
             </div>
             <button class="play-btn" id="floatingPlayBtn" title="Play/Pause">
                 <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -459,7 +488,9 @@
         const volumeSliders = [];
         const volumeBtns = [];
         const lastNonZeroVolumes = [];
+        const gainNodes = [];
         const hlsPlayers = [];
+        let audioCtx = null;
         let currentPlayingIndex = -1;
 
         // SVG Icons
@@ -479,6 +510,35 @@
         const floatingVolBtn = document.getElementById('floatingVolBtn');
         const floatingVolSlider = document.getElementById('floatingVolSlider');
 
+        // Initialize Web Audio API AudioContext for iOS Volume Control Support
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Setup Web Audio API gain node wrapper for an audio element
+        function attachWebAudioGain(audioElement, index) {
+            initAudioContext();
+            if (!audioCtx || gainNodes[index]) return;
+
+            try {
+                const source = audioCtx.createMediaElementSource(audioElement);
+                const gainNode = audioCtx.createGain();
+                source.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                gainNodes[index] = gainNode;
+            } catch (err) {
+                console.debug('Web Audio API Node link error:', err);
+            }
+        }
+
         // Render Stations
         stations.forEach((station, index) => {
             const card = document.createElement('div');
@@ -493,14 +553,14 @@
                     <div class="station-name">${station.name}</div>
                     <div class="status" id="status-${index}">Conectado</div>
                 </div>
-                <audio id="audio-${index}" preload="none"></audio>
+                <audio id="audio-${index}" crossorigin="anonymous" preload="none"></audio>
                 <div class="custom-player">
                     <button class="play-btn" id="btn-${index}" title="Reproducir" aria-label="Reproducir ${station.name}">${playIcon}</button>
                     <div class="volume-container">
                         <button class="vol-btn" id="volBtn-${index}" title="Silenciar / Activar sonido" aria-label="Silenciar ${station.name}">
                             <svg class="volume-icon" viewBox="0 0 24 24">${volHighIcon}</svg>
                         </button>
-                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="1" aria-label="Volumen de ${station.name}">
+                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.02" value="1" aria-label="Volumen de ${station.name}">
                     </div>
                 </div>`;
             gridContainer.appendChild(card);
@@ -543,6 +603,7 @@
 
             // Click Play / Pause Card
             button.addEventListener('click', () => {
+                initAudioContext();
                 if (currentPlayingIndex === index && !audio.paused) {
                     pauseStation(index);
                 } else {
@@ -550,14 +611,16 @@
                 }
             });
 
-            // Volume Slider Event
+            // Volume Slider Event (Handles iOS + Android + PC)
             volume.addEventListener('input', event => {
+                initAudioContext();
                 const val = Number(event.target.value);
                 setStationVolume(index, val);
             });
 
             // Mute / Unmute Toggle Button Event
             volBtn.addEventListener('click', () => {
+                initAudioContext();
                 toggleMute(index);
             });
 
@@ -597,10 +660,16 @@
             });
         });
 
-        // Volume Management
+        // Volume Control Supporting iOS Safari via GainNode
         function setStationVolume(index, val) {
             const audio = activeAudios[index];
-            audio.volume = val;
+            audio.volume = val; // Works on PC & Android
+
+            // Web Audio API GainNode Control (Works on iOS / iPhone)
+            if (gainNodes[index] && audioCtx) {
+                gainNodes[index].gain.setValueAtTime(val, audioCtx.currentTime);
+            }
+
             volumeSliders[index].value = val;
 
             if (val > 0) {
@@ -609,7 +678,7 @@
 
             updateVolumeIcon(index, val);
 
-            // Sync floating volume if this is the active playing station
+            // Sync floating volume if this is the active station
             if (currentPlayingIndex === index) {
                 floatingVolSlider.value = val;
                 updateFloatingVolumeIcon(val);
@@ -617,8 +686,8 @@
         }
 
         function toggleMute(index) {
-            const audio = activeAudios[index];
-            if (audio.volume > 0) {
+            const currentVol = volumeSliders[index].value;
+            if (Number(currentVol) > 0) {
                 setStationVolume(index, 0);
             } else {
                 const restoreVal = lastNonZeroVolumes[index] || 1;
@@ -650,12 +719,14 @@
 
         // Floating Player Volume Controls
         floatingVolSlider.addEventListener('input', e => {
+            initAudioContext();
             if (currentPlayingIndex >= 0) {
                 setStationVolume(currentPlayingIndex, Number(e.target.value));
             }
         });
 
         floatingVolBtn.addEventListener('click', () => {
+            initAudioContext();
             if (currentPlayingIndex >= 0) {
                 toggleMute(currentPlayingIndex);
             }
@@ -663,8 +734,12 @@
 
         // Play Station with Live Edge Synchronization
         async function playStation(index) {
+            initAudioContext();
             const targetAudio = activeAudios[index];
             const station = stations[index];
+
+            // Attach Web Audio API gain node for iOS volume compatibility
+            attachWebAudioGain(targetAudio, index);
 
             // Pause all other stations
             activeAudios.forEach((audio, i) => {
@@ -748,14 +823,16 @@
             floatingPlayBtn.innerHTML = isSelectedPlaying ? pauseIcon : playIcon;
             floatingPlayBtn.title = isSelectedPlaying ? 'Pausar' : 'Reproducir';
             
-            // Sync floating player volume with active station volume
-            floatingVolSlider.value = selectedAudio.volume;
-            updateFloatingVolumeIcon(selectedAudio.volume);
+            // Sync floating player volume
+            const currentVol = volumeSliders[currentPlayingIndex].value;
+            floatingVolSlider.value = currentVol;
+            updateFloatingVolumeIcon(Number(currentVol));
 
             floatingPlayer.classList.add('active');
         }
 
         floatingPlayBtn.addEventListener('click', () => {
+            initAudioContext();
             if (currentPlayingIndex < 0) return;
             const audio = activeAudios[currentPlayingIndex];
             if (audio.paused) {
@@ -813,9 +890,7 @@
                 syncInterface();
 
                 if (wasPlaying) {
-                    // Intenta auto-reproducir inmediatamente
                     playStation(idx).catch(() => {
-                        // Si el navegador bloquea autoplay en recarga limpia
                         statusSpans[idx].textContent = 'Toca para continuar';
                         floatingStatus.textContent = 'Toca para continuar';
                     });
