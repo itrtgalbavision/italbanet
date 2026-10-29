@@ -197,7 +197,7 @@
             color: #34d399;
         }
 
-        /* Controles de reproducción y volumen optimizados */
+        /* Controles de reproducción y volumen */
         .custom-player {
             width: 100%;
             display: flex;
@@ -232,7 +232,6 @@
             fill: currentColor;
         }
 
-        /* Botones táctiles de volumen rápido para móviles */
         .vol-btn-group {
             display: flex;
             align-items: center;
@@ -240,23 +239,6 @@
             background: #1e293b;
             padding: 3px;
             border-radius: 20px;
-        }
-
-        .vol-step-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 6px 8px;
-            border-radius: 14px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .vol-step-btn.active {
-            background: var(--accent-color);
-            color: #0f172a;
         }
 
         .vol-mute-btn {
@@ -441,45 +423,16 @@
             const playBtn = card.querySelector('.play-btn');
             const status = card.querySelector('.status');
             const muteBtn = card.querySelector('.vol-mute-btn');
-            const stepBtns = card.querySelectorAll('.vol-step-btn');
 
             activeAudios.push(audio);
             activeCards.push(card);
             playBtns.push(playBtn);
             statusSpans.push(status);
 
-            // CONFIGURACIÓN HLS FIJA (Restaurada la estabilidad del código original sin aceleraciones)
-            if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({ 
-                    liveSyncDurationCount: 3, 
-                    maxLiveSyncPlaybackRate: 1.0 
-                });
-                hls.loadSource(station.url);
-                hls.attachMedia(audio);
-                hlsPlayers[index] = hls;
-            } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-                audio.src = station.url;
-            }
+            // Inicialización de HLS
+            initHlsPlayer(index);
 
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
-
-            stepBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    initAudioContext();
-                    setupWebAudioGain(index);
-                    const volValue = parseFloat(btn.getAttribute('data-vol'));
-                    
-                    if (gainNodes[index]) {
-                        gainNodes[index].gain.setValueAtTime(volValue, audioCtx.currentTime);
-                    }
-                    audio.volume = volValue;
-
-                    stepBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    muteBtn.classList.remove('muted');
-                    muteBtn.innerHTML = iconVolHigh;
-                });
-            });
 
             muteBtn.addEventListener('click', () => {
                 initAudioContext();
@@ -503,6 +456,26 @@
             audio.addEventListener('pause', () => syncUI());
         });
 
+        function initHlsPlayer(index) {
+            const audio = activeAudios[index];
+            const station = stations[index];
+
+            if (window.Hls && Hls.isSupported()) {
+                if (hlsPlayers[index]) {
+                    hlsPlayers[index].destroy();
+                }
+                const hls = new Hls({ 
+                    liveSyncDurationCount: 3, 
+                    maxLiveSyncPlaybackRate: 1.0 
+                });
+                hls.loadSource(station.url);
+                hls.attachMedia(audio);
+                hlsPlayers[index] = hls;
+            } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                audio.src = station.url;
+            }
+        }
+
         function setupWebAudioGain(index) {
             if (!gainNodes[index] && audioCtx) {
                 try {
@@ -522,20 +495,30 @@
             setupWebAudioGain(index);
 
             const targetAudio = activeAudios[index];
+
+            // SI SE PRESIONA PAUSA: Detener transmisión y limpiar el punto de reproducción
             if (currentPlayingIndex === index && !targetAudio.paused) {
-                targetAudio.pause();
+                stopStationAndReset(index);
                 return;
             }
 
-            // Detener todas las demás emisoras
-            activeAudios.forEach((aud, i) => { if (i !== index && !aud.paused) aud.pause(); });
+            // Detener y resetear cualquier otra emisora previamente activa
+            activeAudios.forEach((aud, i) => { 
+                if (i !== index && !aud.paused) {
+                    stopStationAndReset(i);
+                } 
+            });
 
             currentPlayingIndex = index;
             statusSpans[index].textContent = 'Conectando…';
             floatingStatus.textContent = 'Conectando…';
 
+            // Cargar y forzar el borde del directo en tiempo real (Live Edge)
             if (hlsPlayers[index]) {
                 hlsPlayers[index].stopLoad();
+                hlsPlayers[index].detachMedia();
+                hlsPlayers[index].attachMedia(targetAudio);
+                hlsPlayers[index].loadSource(stations[index].url + '?t=' + Date.now());
                 hlsPlayers[index].startLoad();
             } else {
                 targetAudio.src = stations[index].url + '?t=' + Date.now();
@@ -547,6 +530,21 @@
             } catch (err) {
                 statusSpans[index].textContent = 'Error al conectar';
             }
+        }
+
+        // Función para detener y destruir el buffer al pausar
+        function stopStationAndReset(index) {
+            const audio = activeAudios[index];
+            audio.pause();
+
+            if (hlsPlayers[index]) {
+                hlsPlayers[index].stopLoad();
+            } else {
+                audio.removeAttribute('src');
+                audio.load();
+            }
+            statusSpans[index].textContent = 'Pausado';
+            syncUI();
         }
 
         function syncUI() {
@@ -582,11 +580,9 @@
             });
         });
 
-        // REINICIO COMPLETO DE PÁGINA
+        // Reinicio completo de la página
         document.getElementById('refreshBtn').addEventListener('click', () => {
-            // Detener transmisiones activas antes de recargar
-            activeAudios.forEach(aud => aud.pause());
-            // Recargar la página totalmente limpia
+            activeAudios.forEach((aud, i) => stopStationAndReset(i));
             location.reload();
         });
     </script>
