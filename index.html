@@ -366,19 +366,25 @@
         const activeAudios = [];
         const activeCards = [];
         const playBtns = [];
+        const statusSpans = [];
+        const hlsPlayers = [];
         let currentPlayingIndex = -1;
 
-        // SVG Icons
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
         const volIcon = `<svg class="volume-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+
+        const floatingPlayer = document.getElementById('floatingPlayer');
+        const floatingPlayBtn = document.getElementById('floatingPlayBtn');
+        const floatingTitle = document.getElementById('floatingTitle');
+        const floatingStatus = document.getElementById('floatingStatus');
+        const floatingLogo = document.getElementById('floatingLogo');
 
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
             card.style.setProperty('--bg-logo', `url('${station.logo}')`);
             card.setAttribute('data-name', station.name.toLowerCase());
-
             card.innerHTML = `
                 <div class="logo-container">
                     <img src="${station.logo}" alt="${station.name}" class="station-logo" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
@@ -387,125 +393,189 @@
                     <div class="station-name">${station.name}</div>
                     <div class="status" id="status-${index}">Conectado</div>
                 </div>
-                
-                <audio id="audio-${index}"></audio>
-
+                <audio id="audio-${index}" preload="none"></audio>
                 <div class="custom-player">
-                    <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
+                    <button class="play-btn" id="btn-${index}" title="Reproducir" aria-label="Reproducir ${station.name}">${playIcon}</button>
                     <div class="volume-container">
                         ${volIcon}
-                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="1">
+                        <input type="range" class="volume-slider" id="vol-${index}" min="0" max="1" step="0.05" value="1" aria-label="Volumen de ${station.name}">
                     </div>
-                </div>
-            `;
-
+                </div>`;
             gridContainer.appendChild(card);
 
-            const audioElement = document.getElementById(`audio-${index}`);
-            const btnElement = document.getElementById(`btn-${index}`);
-            const volElement = document.getElementById(`vol-${index}`);
-            const statusSpan = document.getElementById(`status-${index}`);
+            const audio = card.querySelector('audio');
+            const button = card.querySelector('.play-btn');
+            const volume = card.querySelector('.volume-slider');
+            const status = card.querySelector('.status');
 
-            audioElement.volume = 1.0;
-
-            activeAudios.push(audioElement);
+            audio.volume = 1;
+            activeAudios.push(audio);
             activeCards.push(card);
-            playBtns.push(btnElement);
+            playBtns.push(button);
+            statusSpans.push(status);
 
-            // Cargar HLS
-            if (Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(station.url);
-                hls.attachMedia(audioElement);
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) statusSpan.textContent = "Error";
+            if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls({
+                    liveSyncDurationCount: 3,
+                    maxLiveSyncPlaybackRate: 1.1
                 });
-            } else if (audioElement.canPlayType('application/vnd.apple.mpegurl')) {
-                audioElement.src = station.url;
+                hls.loadSource(station.url);
+                hls.attachMedia(audio);
+                hls.on(Hls.Events.ERROR, (_event, data) => {
+                    if (data.fatal) {
+                        status.textContent = 'Error de transmisión';
+                        if (currentPlayingIndex === index) floatingStatus.textContent = 'Error de transmisión';
+                        hls.destroy();
+                    }
+                });
+                hlsPlayers[index] = hls;
+            } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                audio.src = station.url;
             }
 
-            // Lógica de Play/Pause con Media Session API para pantalla de bloqueo
-            btnElement.addEventListener('click', () => {
-                if (audioElement.paused) {
-                    // Pausar las demás radios
-                    activeAudios.forEach((el, i) => {
-                        if (i !== index) {
-                            el.pause();
-                            activeCards[i].classList.remove('playing');
-                            playBtns[i].innerHTML = playIcon;
-                            document.getElementById(`status-${i}`).textContent = "Conectado";
-                        }
-                    });
-
-                    audioElement.play().then(() => {
-                        currentPlayingIndex = index;
-                        card.classList.add('playing');
-                        btnElement.innerHTML = pauseIcon;
-                        statusSpan.textContent = "Reproduciendo";
-
-                        // Configurar la Media Session para la Pantalla de Bloqueo del Celular
-                        if ('mediaSession' in navigator) {
-                            navigator.mediaSession.metadata = new MediaMetadata({
-                                title: station.name,
-                                artist: 'Radios Streaming - Guatemala',
-                                album: 'LMB Desing',
-                                artwork: [
-                                    { src: station.logo, sizes: '96x96', type: 'image/png' },
-                                    { src: station.logo, sizes: '128x128', type: 'image/png' },
-                                    { src: station.logo, sizes: '192x192', type: 'image/png' },
-                                    { src: station.logo, sizes: '512x512', type: 'image/png' }
-                                ]
-                            });
-
-                            navigator.mediaSession.setActionHandler('play', () => { audioElement.play(); });
-                            navigator.mediaSession.setActionHandler('pause', () => { audioElement.pause(); });
-                        }
-
-                        // Actualizar barra flotante
-                        updateFloatingPlayer(station, true);
-                    }).catch(err => {
-                        console.error("Error al reproducir:", err);
-                        statusSpan.textContent = "Error de reproducción";
-                    });
-
+            button.addEventListener('click', () => {
+                if (currentPlayingIndex === index && !audio.paused) {
+                    audio.pause();
                 } else {
-                    audioElement.pause();
-                    card.classList.remove('playing');
-                    btnElement.innerHTML = playIcon;
-                    statusSpan.textContent = "Pausado";
-                    updateFloatingPlayer(station, false);
+                    playStation(index);
                 }
             });
 
-            // Control de volumen
-            volElement.addEventListener('input', (e) => {
-                audioElement.volume = e.target.value;
+            volume.addEventListener('input', event => {
+                audio.volume = Number(event.target.value);
             });
-        });
 
-        // Buscador interactivo
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase().trim();
-            activeCards.forEach((card, index) => {
-                const name = stations[index].name.toLowerCase();
-                if (name.includes(query)) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
+            // La interfaz escucha el estado real del audio, no solo el clic.
+            audio.addEventListener('playing', () => {
+                currentPlayingIndex = index;
+                syncInterface();
+                status.textContent = 'En vivo';
+                floatingStatus.textContent = 'En vivo';
+                updateMediaSession(index);
+            });
+
+            audio.addEventListener('play', () => {
+                currentPlayingIndex = index;
+                syncInterface();
+            });
+
+            audio.addEventListener('pause', () => {
+                syncInterface();
+            });
+
+            audio.addEventListener('waiting', () => {
+                if (currentPlayingIndex === index) {
+                    status.textContent = 'Conectando…';
+                    floatingStatus.textContent = 'Conectando…';
                 }
             });
+
+            audio.addEventListener('error', () => {
+                status.textContent = 'Error de reproducción';
+                if (currentPlayingIndex === index) floatingStatus.textContent = 'Error de reproducción';
+                syncInterface();
+            });
         });
 
-        function updateFloatingPlayer(station, isPlaying) {
-            const floating = document.getElementById('floatingPlayer');
-            if (isPlaying) {
-                document.getElementById('floatingLogo').src = station.logo;
-                document.getElementById('floatingTitle').textContent = station.name;
-                floating.classList.add('active');
-            } else {
-                floating.classList.remove('active');
+        async function playStation(index) {
+            const targetAudio = activeAudios[index];
+
+            // Pausar todas las demás emisoras antes de iniciar la seleccionada.
+            activeAudios.forEach((audio, i) => {
+                if (i !== index && !audio.paused) audio.pause();
+            });
+
+            currentPlayingIndex = index;
+            syncInterface();
+            statusSpans[index].textContent = 'Conectando…';
+            floatingStatus.textContent = 'Conectando…';
+
+            try {
+                await targetAudio.play();
+                // El evento "playing" terminará de sincronizar cuando haya audio.
+                syncInterface();
+            } catch (error) {
+                console.error('Error al reproducir:', error);
+                statusSpans[index].textContent = 'No se pudo reproducir';
+                floatingStatus.textContent = 'No se pudo reproducir';
+                syncInterface();
             }
         }
+
+        function syncInterface() {
+            activeAudios.forEach((audio, index) => {
+                const isPlaying = !audio.paused && !audio.ended;
+                activeCards[index].classList.toggle('playing', isPlaying);
+                playBtns[index].innerHTML = isPlaying ? pauseIcon : playIcon;
+                playBtns[index].title = isPlaying ? 'Pausar' : 'Reproducir';
+                playBtns[index].setAttribute('aria-label', `${isPlaying ? 'Pausar' : 'Reproducir'} ${stations[index].name}`);
+
+                if (!isPlaying && statusSpans[index].textContent === 'En vivo') {
+                    statusSpans[index].textContent = 'Pausado';
+                }
+                if (!isPlaying && statusSpans[index].textContent === 'Reproduciendo') {
+                    statusSpans[index].textContent = 'Pausado';
+                }
+            });
+
+            if (currentPlayingIndex < 0) {
+                floatingPlayer.classList.remove('active');
+                return;
+            }
+
+            const selectedAudio = activeAudios[currentPlayingIndex];
+            const selectedStation = stations[currentPlayingIndex];
+            const isSelectedPlaying = !selectedAudio.paused && !selectedAudio.ended;
+
+            floatingLogo.src = selectedStation.logo;
+            floatingLogo.alt = selectedStation.name;
+            floatingTitle.textContent = selectedStation.name;
+            floatingStatus.textContent = isSelectedPlaying ? 'En vivo' : 'Pausado';
+            floatingPlayBtn.innerHTML = isSelectedPlaying ? pauseIcon : playIcon;
+            floatingPlayBtn.title = isSelectedPlaying ? 'Pausar' : 'Reproducir';
+            floatingPlayer.classList.add('active');
+        }
+
+        floatingPlayBtn.addEventListener('click', () => {
+            if (currentPlayingIndex < 0) return;
+            const audio = activeAudios[currentPlayingIndex];
+            if (audio.paused) {
+                playStation(currentPlayingIndex);
+            } else {
+                audio.pause();
+            }
+        });
+
+        function updateMediaSession(index) {
+            if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+            const station = stations[index];
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: station.name,
+                artist: 'Radios Streaming - Guatemala',
+                album: 'LMB Desing',
+                artwork: [{ src: station.logo, sizes: '192x192', type: 'image/png' }]
+            });
+
+            try {
+                navigator.mediaSession.setActionHandler('play', () => {
+                    if (currentPlayingIndex >= 0) playStation(currentPlayingIndex);
+                });
+                navigator.mediaSession.setActionHandler('pause', () => {
+                    if (currentPlayingIndex >= 0) activeAudios[currentPlayingIndex].pause();
+                });
+            } catch (error) {
+                console.debug('Media Session no disponible:', error);
+            }
+        }
+
+        // Buscador de emisoras
+        document.getElementById('searchInput').addEventListener('input', event => {
+            const query = event.target.value.toLowerCase().trim();
+            activeCards.forEach((card, index) => {
+                card.style.display = stations[index].name.toLowerCase().includes(query) ? 'flex' : 'none';
+            });
+        });
     </script>
 </body>
 </html>
