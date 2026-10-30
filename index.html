@@ -37,7 +37,7 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 20px 15px 100px 15px;
+            padding: 20px 15px 120px 15px; /* Ajustado para dejar espacio al banner y al reproductor */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -147,7 +147,6 @@
             overflow: hidden;
         }
 
-        /* Fondo de marca de agua con el logo de la radio */
         .station-card::before {
             content: "";
             position: absolute;
@@ -165,7 +164,7 @@
         }
 
         .station-card.playing::before {
-            opacity: 0.12; /* Un poco más visible al reproducir */
+            opacity: 0.12;
         }
 
         .station-card.playing {
@@ -222,7 +221,6 @@
             color: #34d399;
         }
 
-        /* Controles de reproducción y volumen */
         .custom-player {
             width: 100%;
             display: flex;
@@ -336,6 +334,24 @@
             color: #34d399;
         }
 
+        /* Estilos del Banner PWA (Opción 2) */
+        #pwa-install-banner {
+            display: none;
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 420px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            z-index: 2000;
+            border: 1px solid var(--accent-color);
+        }
+
         @media (max-width: 480px) {
             .controls-container {
                 flex-direction: column;
@@ -364,6 +380,20 @@
         </div>
 
         <div class="grid-stations" id="stationsGrid"></div>
+    </div>
+
+    <!-- Banner / Popup de aviso de instalación (Opción 2) -->
+    <div id="pwa-install-banner">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <strong style="font-size: 16px; color: var(--accent-color);">📲 Instalar App Radios</strong>
+            <button onclick="cerrarBanner()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted);">✕</button>
+        </div>
+        <p id="pwa-banner-text" style="font-size: 0.88rem; line-height: 1.4; margin: 0 0 14px 0; color: var(--text-muted);">
+            Instala esta aplicación en tu pantalla de inicio para acceder rápidamente.
+        </p>
+        <button id="pwa-install-btn" style="display: none; width: 100%; background: var(--accent-color); color: #0b0f19; border: none; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer;">
+            Instalar en la pantalla de inicio
+        </button>
     </div>
 
     <div class="floating-player" id="floatingPlayer">
@@ -416,6 +446,45 @@
         const floatingStatus = document.getElementById('floatingStatus');
         const floatingLogo = document.getElementById('floatingLogo');
 
+        // --- Lógica del Banner PWA (Opción 2) ---
+        let deferredPrompt;
+        const banner = document.getElementById('pwa-install-banner');
+        const bannerText = document.getElementById('pwa-banner-text');
+        const installBtn = document.getElementById('pwa-install-btn');
+
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+        if (!isStandalone) {
+            if (isIOS) {
+                bannerText.innerHTML = 'Para guardar como App en tu iPhone:<br>1. Toca el botón <strong>Compartir</strong> (<span style="font-size:16px;">⎘</span>)<br>2. Elige <strong>"Agregar a inicio"</strong>.';
+                banner.style.display = 'block';
+            } else {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    bannerText.textContent = 'Añade Radios Streaming a tu pantalla de inicio para un acceso rápido.';
+                    installBtn.style.display = 'block';
+                    banner.style.display = 'block';
+                });
+            }
+        }
+
+        installBtn.addEventListener('click', () => {
+            banner.style.display = 'none';
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            }
+        });
+
+        function cerrarBanner() {
+            banner.style.display = 'none';
+        }
+        // ----------------------------------------
+
         function initAudioContext() {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -429,7 +498,6 @@
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
-            // Asignamos una propiedad CSS personalizada por tarjeta para cargar su respectivo logo de fondo como marca de agua
             card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
 
             card.innerHTML = `
@@ -520,7 +588,6 @@
             }
         }
 
-        // Función para actualizar los metadatos y mostrar el logo en miniatura en la pantalla de bloqueo
         function updateMediaSession(index) {
             if ('mediaSession' in navigator) {
                 const station = stations[index];
@@ -536,16 +603,9 @@
                     ]
                 });
 
-                // Control multimedia desde la pantalla de bloqueo o auriculares
-                navigator.mediaSession.setActionHandler('play', () => {
-                    handlePlayTrigger(index);
-                });
-                navigator.mediaSession.setActionHandler('pause', () => {
-                    stopStationAndReset(index);
-                });
-                navigator.mediaSession.setActionHandler('stop', () => {
-                    stopStationAndReset(index);
-                });
+                navigator.mediaSession.setActionHandler('play', () => handlePlayTrigger(index));
+                navigator.mediaSession.setActionHandler('pause', () => stopStationAndReset(index));
+                navigator.mediaSession.setActionHandler('stop', () => stopStationAndReset(index));
             }
         }
 
@@ -628,7 +688,6 @@
             if (currentPlayingIndex >= 0) handlePlayTrigger(currentPlayingIndex);
         });
 
-        // Buscador
         document.getElementById('searchInput').addEventListener('input', e => {
             const query = e.target.value.toLowerCase().trim();
             activeCards.forEach((card, idx) => {
@@ -636,7 +695,6 @@
             });
         });
 
-        // Reinicio completo de la página
         document.getElementById('refreshBtn').addEventListener('click', () => {
             activeAudios.forEach((aud, i) => stopStationAndReset(i));
             location.reload();
