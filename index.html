@@ -561,8 +561,9 @@
         const gainNodes = [];
         let audioCtx = null;
         let currentPlayingIndex = -1;
+        let hasAutoPlayed = false; // Control para el autoplay inicial
 
-        // Variables de monitoreo (Watchdog)
+        // Variables de monitoreo (Watchdog) con intervalo de 2 segundos
         let lastCurrentTime = 0;
         let stallCheckTimer = null;
 
@@ -689,7 +690,6 @@
 
             audio.addEventListener('pause', () => syncUI());
 
-            // Detección instantánea de pérdida de señal
             audio.addEventListener('stalled', () => {
                 reconnectStream(index);
             });
@@ -763,7 +763,7 @@
             }
         }
 
-        // Sistema Watchdog: Revisa cada 6 segundos si el flujo está atascado
+        // Sistema Watchdog revisando cada 2 segundos
         function startWatchdog() {
             if (stallCheckTimer) clearInterval(stallCheckTimer);
 
@@ -778,7 +778,7 @@
                     }
                     lastCurrentTime = audio.currentTime;
                 }
-            }, 2000); // <--- CAMBIA ESTE VALOR (está en milisegundos)
+            }, 2000); // 2 segundos exactos
         }
 
         function setupWebAudioGain(index) {
@@ -913,6 +913,34 @@
         document.getElementById('refreshBtn').addEventListener('click', () => {
             activeAudios.forEach((aud, i) => stopStationAndReset(i));
             location.reload();
+        });
+
+        // --- FUNCIÓN DE AUTOPLAY INICIAL AL ENTRAR / PRIMER TOQUE ---
+        async function attemptAutoPlayFirstStation() {
+            if (hasAutoPlayed) return;
+            hasAutoPlayed = true;
+
+            // Intenta reproducir la primera estación automáticamente (índice 0: Xtrema 101.3)
+            try {
+                await handlePlayTrigger(0);
+            } catch (e) {
+                console.debug("Autoplay bloqueado por el navegador, esperando interacción del usuario.");
+            }
+        }
+
+        // Intento directo al cargar la página
+        window.addEventListener('load', () => {
+            attemptAutoPlayFirstStation();
+        });
+
+        // Evento global por si el navegador bloquea el autoplay inicial: 
+        // Apenas el usuario toque o haga clic en cualquier parte de la pantalla, arranca la primera radio.
+        ['click', 'touchstart', 'keydown'].forEach(evt => {
+            window.addEventListener(evt, () => {
+                if (currentPlayingIndex === -1 && !hasAutoPlayed) {
+                    attemptAutoPlayFirstStation();
+                }
+            }, { once: true });
         });
     </script>
 </body>
