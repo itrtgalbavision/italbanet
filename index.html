@@ -561,9 +561,9 @@
         const gainNodes = [];
         let audioCtx = null;
         let currentPlayingIndex = -1;
-        let hasAutoPlayed = false; // Control para el autoplay inicial
+        let hasAutoPlayed = false;
 
-        // Variables de monitoreo (Watchdog) con intervalo de 2 segundos
+        // Variables de monitoreo (Watchdog & Latency Sync) cada 2 segundos
         let lastCurrentTime = 0;
         let stallCheckTimer = null;
 
@@ -708,8 +708,8 @@
                     hlsPlayers[index].destroy();
                 }
                 const hls = new Hls({ 
-                    liveSyncDurationCount: 3, 
-                    maxLiveSyncPlaybackRate: 1.0,
+                    liveSyncDurationCount: 2, // Mantiene cerca del borde en vivo
+                    maxLiveSyncPlaybackRate: 1.1, // Permite acelerar un 10% si hay desfase menor para alcanzar el vivo
                     recoverMediaErrorDeltas: true
                 });
                 
@@ -763,7 +763,7 @@
             }
         }
 
-        // Sistema Watchdog revisando cada 2 segundos
+        // --- SISTEMA WATCHDOG & CONTROL DE DESFASE (Cada 2 segundos) ---
         function startWatchdog() {
             if (stallCheckTimer) clearInterval(stallCheckTimer);
 
@@ -771,12 +771,27 @@
                 if (currentPlayingIndex < 0) return;
 
                 const audio = activeAudios[currentPlayingIndex];
+                const hls = hlsPlayers[currentPlayingIndex];
                 
                 if (!audio.paused && !audio.ended) {
+                    // 1. Detección de congelamiento (si currentTime no cambia)
                     if (audio.currentTime === lastCurrentTime) {
                         reconnectStream(currentPlayingIndex);
+                        return;
                     }
                     lastCurrentTime = audio.currentTime;
+
+                    // 2. Control de desfase en transmisiones HLS en vivo
+                    if (hls && hls.liveSyncPosition) {
+                        const latency = hls.liveSyncPosition - audio.currentTime;
+                        
+                        // Si el usuario se desfasó más de 6 segundos respecto al vivo actual:
+                        // HLS.js salta automáticamente al borde sin cortar el flujo principal
+                        if (latency > 6) {
+                            console.log(`Desfase detectado (${latency.toFixed(1)}s). Sincronizando al borde en vivo...`);
+                            audio.currentTime = hls.liveSyncPosition;
+                        }
+                    }
                 }
             }, 2000); // 2 segundos exactos
         }
@@ -915,12 +930,10 @@
             location.reload();
         });
 
-        // --- FUNCIÓN DE AUTOPLAY INICIAL AL ENTRAR / PRIMER TOQUE ---
         async function attemptAutoPlayFirstStation() {
             if (hasAutoPlayed) return;
             hasAutoPlayed = true;
 
-            // Intenta reproducir la primera estación automáticamente (índice 0: Xtrema 101.3)
             try {
                 await handlePlayTrigger(0);
             } catch (e) {
@@ -928,13 +941,10 @@
             }
         }
 
-        // Intento directo al cargar la página
         window.addEventListener('load', () => {
             attemptAutoPlayFirstStation();
         });
 
-        // Evento global por si el navegador bloquea el autoplay inicial: 
-        // Apenas el usuario toque o haga clic en cualquier parte de la pantalla, arranca la primera radio.
         ['click', 'touchstart', 'keydown'].forEach(evt => {
             window.addEventListener(evt, () => {
                 if (currentPlayingIndex === -1 && !hasAutoPlayed) {
