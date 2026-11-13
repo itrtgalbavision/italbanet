@@ -707,9 +707,15 @@
                 if (hlsPlayers[index]) {
                     hlsPlayers[index].destroy();
                 }
+
                 const hls = new Hls({ 
-                    liveSyncDurationCount: 2, // Mantiene cerca del borde en vivo
-                    maxLiveSyncPlaybackRate: 1.1, // Permite acelerar un 10% si hay desfase menor para alcanzar el vivo
+                    /* =========================================================
+                       CONFIGURACIONES DE HLS.JS PARA CONTROL DE DESFASE Y LATENCIA
+                       ========================================================= */
+                    liveSyncDurationCount: 2,       // 1. Número de fragmentos que mantiene detrás del vivo (baja latencia)
+                    maxLiveSyncPlaybackRate: 1.1,   // 2. Velocidad máxima extra (1.1 = 10% más rápido) para alcanzar el vivo sin cortes
+                    /* ========================================================= */
+                    
                     recoverMediaErrorDeltas: true
                 });
                 
@@ -781,19 +787,18 @@
                     }
                     lastCurrentTime = audio.currentTime;
 
-                    // 2. Control de desfase en transmisiones HLS en vivo
+                    // 2. Control de desfase en transmisiones HLS en vivo (Ajustar tolerancia aquí si deseas)
                     if (hls && hls.liveSyncPosition) {
                         const latency = hls.liveSyncPosition - audio.currentTime;
                         
-                        // Si el usuario se desfasó más de 6 segundos respecto al vivo actual:
-                        // HLS.js salta automáticamente al borde sin cortar el flujo principal
-                        if (latency > 6) {
+                       // Si el usuario se desfasó más de 6 segundos, salta al borde en vivo de forma fluida
+                        if (latency > 18) { // <--- CAMBIA ESTE "6" por los segundos que prefieras (Ej: 10 para 10 segundos)
                             console.log(`Desfase detectado (${latency.toFixed(1)}s). Sincronizando al borde en vivo...`);
                             audio.currentTime = hls.liveSyncPosition;
                         }
                     }
                 }
-            }, 2000); // 2 segundos exactos
+       }, 10000); // <--- CAMBIA ESTE NÚMERO (Ej: 3000 para 3 segundos, 5000 para 5 segundos)
         }
 
         function setupWebAudioGain(index) {
