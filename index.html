@@ -37,7 +37,7 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 20px 15px 120px 15px;
+            padding: 20px 15px 120px 15px; /* Ajustado para dejar espacio al banner y al reproductor */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -221,7 +221,10 @@
             color: #34d399;
         }
 
-        /* Reproductor integrado */
+        /* =========================================================
+           REDISEÑO TECNOLÓGICO Y FUTURISTA DEL REPRODUCTOR
+           ========================================================= */
+
         .custom-player {
             width: 100%;
             display: flex;
@@ -245,6 +248,7 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 15px rgba(56, 189, 248, 0.25);
         }
 
+        /* Botón de reproducción cibernético */
         .play-btn {
             background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
             border: none;
@@ -306,7 +310,7 @@
             filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
         }
 
-        /* Ecualizador animado */
+        /* Ecualizador animado integrado en la tarjeta */
         .cyber-equalizer {
             display: flex;
             align-items: flex-end;
@@ -325,6 +329,7 @@
 
         .eq-bar {
             width: 3px;
+            height: 100%;
             background: var(--accent-color);
             border-radius: 2px;
             transform-origin: bottom;
@@ -342,6 +347,7 @@
             100% { height: 35%; background-color: #34d399; }
         }
 
+        /* Controles de volumen */
         .vol-btn-group {
             display: flex;
             align-items: center;
@@ -381,7 +387,7 @@
             fill: currentColor;
         }
 
-        /* Player Flotante Inferior */
+        /* Player Flotante Inferior Rediseñado */
         .floating-player {
             position: fixed;
             bottom: 0;
@@ -461,7 +467,7 @@
             50% { opacity: 0.3; }
         }
 
-        /* Banner PWA */
+        /* Estilos del Banner PWA (Opción 2) */
         #pwa-install-banner {
             display: none;
             position: fixed;
@@ -509,7 +515,7 @@
         <div class="grid-stations" id="stationsGrid"></div>
     </div>
 
-    <!-- Banner / Popup de aviso de instalación -->
+    <!-- Banner / Popup de aviso de instalación (Opción 2) -->
     <div id="pwa-install-banner">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <strong style="font-size: 16px; color: var(--accent-color);">📲 Instalar App Radios</strong>
@@ -561,11 +567,6 @@
         const gainNodes = [];
         let audioCtx = null;
         let currentPlayingIndex = -1;
-        let hasAutoPlayed = false;
-
-        // Variables de monitoreo (Watchdog & Latency Sync) cada 2 segundos
-        let lastCurrentTime = 0;
-        let stallCheckTimer = null;
 
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -578,7 +579,7 @@
         const floatingStatus = document.getElementById('floatingStatus');
         const floatingLogo = document.getElementById('floatingLogo');
 
-        // PWA Setup
+        // --- Lógica del Banner PWA (Opción 2) ---
         let deferredPrompt;
         const banner = document.getElementById('pwa-install-banner');
         const bannerText = document.getElementById('pwa-banner-text');
@@ -615,6 +616,7 @@
         function cerrarBanner() {
             banner.style.display = 'none';
         }
+        // ----------------------------------------
 
         function initAudioContext() {
             if (!audioCtx) {
@@ -689,14 +691,6 @@
             });
 
             audio.addEventListener('pause', () => syncUI());
-
-            audio.addEventListener('stalled', () => {
-                reconnectStream(index);
-            });
-
-            audio.addEventListener('error', () => {
-                reconnectStream(index);
-            });
         });
 
         function initHlsPlayer(index) {
@@ -707,98 +701,16 @@
                 if (hlsPlayers[index]) {
                     hlsPlayers[index].destroy();
                 }
-
                 const hls = new Hls({ 
-                    /* =========================================================
-                       CONFIGURACIONES DE HLS.JS PARA CONTROL DE DESFASE Y LATENCIA
-                       ========================================================= */
-                    liveSyncDurationCount: 2,       // 1. Número de fragmentos que mantiene detrás del vivo (baja latencia)
-                    maxLiveSyncPlaybackRate: 1.1,   // 2. Velocidad máxima extra (1.1 = 10% más rápido) para alcanzar el vivo sin cortes
-                    /* ========================================================= */
-                    
-                    recoverMediaErrorDeltas: true
+                    liveSyncDurationCount: 3, 
+                    maxLiveSyncPlaybackRate: 1.0 
                 });
-                
-                hls.on(Hls.Events.ERROR, function(event, data) {
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                hls.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                reconnectStream(index);
-                                break;
-                        }
-                    }
-                });
-
                 hls.loadSource(station.url);
                 hls.attachMedia(audio);
                 hlsPlayers[index] = hls;
             } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
                 audio.src = station.url;
             }
-        }
-
-        async function reconnectStream(index) {
-            if (currentPlayingIndex !== index) return;
-            statusSpans[index].textContent = 'Reconectando...';
-            floatingStatus.textContent = 'Reconectando...';
-
-            const targetAudio = activeAudios[index];
-            const timestampUrl = stations[index].url + '?t=' + Date.now();
-
-            if (hlsPlayers[index]) {
-                hlsPlayers[index].stopLoad();
-                hlsPlayers[index].loadSource(timestampUrl);
-                hlsPlayers[index].startLoad();
-            } else {
-                targetAudio.src = timestampUrl;
-                targetAudio.load();
-            }
-
-            try {
-                await targetAudio.play();
-                statusSpans[index].textContent = 'En vivo';
-                floatingStatus.textContent = 'En vivo';
-            } catch (err) {
-                console.debug("Error en reconexión automática:", err);
-            }
-        }
-
-        // --- SISTEMA WATCHDOG & CONTROL DE DESFASE (Cada 2 segundos) ---
-        function startWatchdog() {
-            if (stallCheckTimer) clearInterval(stallCheckTimer);
-
-            stallCheckTimer = setInterval(() => {
-                if (currentPlayingIndex < 0) return;
-
-                const audio = activeAudios[currentPlayingIndex];
-                const hls = hlsPlayers[currentPlayingIndex];
-                
-                if (!audio.paused && !audio.ended) {
-                    // 1. Detección de congelamiento (si currentTime no cambia)
-                    if (audio.currentTime === lastCurrentTime) {
-                        reconnectStream(currentPlayingIndex);
-                        return;
-                    }
-                    lastCurrentTime = audio.currentTime;
-
-                    // 2. Control de desfase en transmisiones HLS en vivo (Ajustar tolerancia aquí si deseas)
-                    if (hls && hls.liveSyncPosition) {
-                        const latency = hls.liveSyncPosition - audio.currentTime;
-                        
-                       // Si el usuario se desfasó más de 6 segundos, salta al borde en vivo de forma fluida
-                        if (latency > 18) { // <--- CAMBIA ESTE "6" por los segundos que prefieras (Ej: 10 para 10 segundos)
-                            console.log(`Desfase detectado (${latency.toFixed(1)}s). Sincronizando al borde en vivo...`);
-                            audio.currentTime = hls.liveSyncPosition;
-                        }
-                    }
-                }
-       }, 10000); // <--- CAMBIA ESTE NÚMERO (Ej: 3000 para 3 segundos, 5000 para 5 segundos)
         }
 
         function setupWebAudioGain(index) {
@@ -871,7 +783,6 @@
             try {
                 await targetAudio.play();
                 updateMediaSession(index);
-                startWatchdog();
             } catch (err) {
                 statusSpans[index].textContent = 'Error al conectar';
             }
@@ -889,11 +800,6 @@
             }
             statusSpans[index].textContent = 'Pausado';
             syncUI();
-            
-            if (currentPlayingIndex === index) {
-                currentPlayingIndex = -1;
-                if (stallCheckTimer) clearInterval(stallCheckTimer);
-            }
         }
 
         function syncUI() {
@@ -914,8 +820,6 @@
                 floatingStatus.textContent = isPlaying ? 'En vivo' : 'Pausado';
                 floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
                 floatingPlayer.classList.add('active');
-            } else {
-                floatingPlayer.classList.remove('active');
             }
         }
 
@@ -933,29 +837,6 @@
         document.getElementById('refreshBtn').addEventListener('click', () => {
             activeAudios.forEach((aud, i) => stopStationAndReset(i));
             location.reload();
-        });
-
-        async function attemptAutoPlayFirstStation() {
-            if (hasAutoPlayed) return;
-            hasAutoPlayed = true;
-
-            try {
-                await handlePlayTrigger(0);
-            } catch (e) {
-                console.debug("Autoplay bloqueado por el navegador, esperando interacción del usuario.");
-            }
-        }
-
-        window.addEventListener('load', () => {
-            attemptAutoPlayFirstStation();
-        });
-
-        ['click', 'touchstart', 'keydown'].forEach(evt => {
-            window.addEventListener(evt, () => {
-                if (currentPlayingIndex === -1 && !hasAutoPlayed) {
-                    attemptAutoPlayFirstStation();
-                }
-            }, { once: true });
         });
     </script>
 </body>
