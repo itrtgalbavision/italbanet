@@ -20,7 +20,7 @@
 
     <!-- Importar Hls.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
+    
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -69,6 +69,7 @@
             margin: 0;
         }
 
+        /* Buscador y Botón de Actualizar */
         .controls-container {
             margin-bottom: 25px;
             display: flex;
@@ -125,6 +126,7 @@
             fill: currentColor;
         }
 
+        /* Cuadrícula de estaciones */
         .grid-stations {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -219,6 +221,7 @@
             color: #34d399;
         }
 
+        /* Reproductor integrado */
         .custom-player {
             width: 100%;
             display: flex;
@@ -303,6 +306,7 @@
             filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
         }
 
+        /* Ecualizador animado */
         .cyber-equalizer {
             display: flex;
             align-items: flex-end;
@@ -321,10 +325,10 @@
 
         .eq-bar {
             width: 3px;
-            height: 20%;
             background: var(--accent-color);
             border-radius: 2px;
             transform-origin: bottom;
+            height: 20%;
         }
 
         .station-card.playing .eq-bar:nth-child(1) { animation: eqAnim 0.8s ease-in-out infinite alternate; }
@@ -377,6 +381,7 @@
             fill: currentColor;
         }
 
+        /* Player Flotante Inferior */
         .floating-player {
             position: fixed;
             bottom: 0;
@@ -456,6 +461,7 @@
             50% { opacity: 0.3; }
         }
 
+        /* Banner PWA */
         #pwa-install-banner {
             display: none;
             position: fixed;
@@ -503,6 +509,7 @@
         <div class="grid-stations" id="stationsGrid"></div>
     </div>
 
+    <!-- Banner / Popup de aviso de instalación -->
     <div id="pwa-install-banner">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
             <strong style="font-size: 16px; color: var(--accent-color);">📲 Instalar App Radios</strong>
@@ -551,8 +558,13 @@
         const playBtns = [];
         const statusSpans = [];
         const hlsPlayers = [];
+        const gainNodes = [];
+        let audioCtx = null;
         let currentPlayingIndex = -1;
-        let playRequestToken = 0;
+
+        // Variables de monitoreo (Watchdog)
+        let lastCurrentTime = 0;
+        let stallCheckTimer = null;
 
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -565,7 +577,7 @@
         const floatingStatus = document.getElementById('floatingStatus');
         const floatingLogo = document.getElementById('floatingLogo');
 
-        // --- Lógica del Banner PWA ---
+        // PWA Setup
         let deferredPrompt;
         const banner = document.getElementById('pwa-install-banner');
         const bannerText = document.getElementById('pwa-banner-text');
@@ -593,7 +605,7 @@
             banner.style.display = 'none';
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => {
+                deferredPrompt.userChoice.then((choiceResult) => {
                     deferredPrompt = null;
                 });
             }
@@ -601,6 +613,16 @@
 
         function cerrarBanner() {
             banner.style.display = 'none';
+        }
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
 
         stations.forEach((station, index) => {
@@ -616,7 +638,7 @@
                     <div class="station-name">${station.name}</div>
                     <div class="status" id="status-${index}">Listo</div>
                 </div>
-                <audio id="audio-${index}" preload="none" playsinline></audio>
+                <audio id="audio-${index}" crossorigin="anonymous" preload="none"></audio>
                 <div class="custom-player">
                     <button class="play-btn" id="btn-${index}" title="Reproducir">${playIcon}</button>
                     <div class="cyber-equalizer">
@@ -640,113 +662,137 @@
             activeCards.push(card);
             playBtns.push(playBtn);
             statusSpans.push(status);
-            hlsPlayers.push(null);
+
+            initHlsPlayer(index);
 
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
 
             muteBtn.addEventListener('click', () => {
+                initAudioContext();
+                setupWebAudioGain(index);
                 const isMuted = muteBtn.classList.toggle('muted');
+
+                if (gainNodes[index]) {
+                    gainNodes[index].gain.setValueAtTime(isMuted ? 0 : 1.0, audioCtx.currentTime);
+                }
                 audio.muted = isMuted;
                 muteBtn.innerHTML = isMuted ? iconMute : iconVolHigh;
             });
 
             audio.addEventListener('playing', () => {
                 currentPlayingIndex = index;
-                status.textContent = 'En vivo';
-                if (currentPlayingIndex === index) {
-                    floatingStatus.textContent = 'En vivo';
-                }
                 syncUI();
+                status.textContent = 'En vivo';
+                floatingStatus.textContent = 'En vivo';
                 updateMediaSession(index);
             });
 
-            audio.addEventListener('waiting', () => {
-                if (!audio.paused && currentPlayingIndex === index) {
-                    status.textContent = 'Cargando…';
-                    floatingStatus.textContent = 'Cargando…';
-                }
-            });
+            audio.addEventListener('pause', () => syncUI());
 
-            audio.addEventListener('pause', () => {
-                if (status.textContent !== 'Error al conectar') {
-                    status.textContent = 'Pausado';
-                }
-                syncUI();
+            // Detección instantánea de pérdida de señal
+            audio.addEventListener('stalled', () => {
+                reconnectStream(index);
             });
 
             audio.addEventListener('error', () => {
-                if (!window.Hls || !Hls.isSupported()) {
-                    status.textContent = 'Error al conectar';
-                    if (currentPlayingIndex === index) {
-                        floatingStatus.textContent = 'Error al conectar';
-                    }
-                    syncUI();
-                }
+                reconnectStream(index);
             });
         });
 
-        function attachHlsStream(index) {
+        function initHlsPlayer(index) {
             const audio = activeAudios[index];
             const station = stations[index];
 
             if (window.Hls && Hls.isSupported()) {
-                if (!hlsPlayers[index]) {
-                    const hls = new Hls({
-                        enableWorker: true,
-                        lowLatencyMode: false,
-                        liveSyncDurationCount: 3,
-                        liveMaxLatencyDurationCount: 6,
-                        maxLiveSyncPlaybackRate: 1.1,
-                        manifestLoadingMaxRetry: 4,
-                        manifestLoadingRetryDelay: 500,
-                        levelLoadingMaxRetry: 4,
-                        levelLoadingRetryDelay: 500,
-                        fragLoadingMaxRetry: 4,
-                        fragLoadingRetryDelay: 500
-                    });
-
-                    hls.on(Hls.Events.ERROR, (event, data) => {
-                        if (!data.fatal) return;
-
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                            statusSpans[index].textContent = 'Reintentando…';
-                            hls.startLoad();
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                            statusSpans[index].textContent = 'Recuperando audio…';
-                            hls.recoverMediaError();
-                        } else {
-                            destroyHlsPlayer(index);
-                            statusSpans[index].textContent = 'Error al conectar';
-                            if (currentPlayingIndex === index) {
-                                floatingStatus.textContent = 'Error al conectar';
-                            }
-                            syncUI();
+                if (hlsPlayers[index]) {
+                    hlsPlayers[index].destroy();
+                }
+                const hls = new Hls({ 
+                    liveSyncDurationCount: 3, 
+                    maxLiveSyncPlaybackRate: 1.0,
+                    recoverMediaErrorDeltas: true
+                });
+                
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                reconnectStream(index);
+                                break;
                         }
-                    });
+                    }
+                });
 
-                    hls.loadSource(station.url);
-                    hls.attachMedia(audio);
-                    hlsPlayers[index] = hls;
-                } else {
-                    hlsPlayers[index].startLoad();
-                }
+                hls.loadSource(station.url);
+                hls.attachMedia(audio);
+                hlsPlayers[index] = hls;
             } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-                if (audio.src !== station.url) {
-                    audio.src = station.url;
-                }
-                audio.load();
+                audio.src = station.url;
             }
         }
 
-        function destroyHlsPlayer(index) {
-            const audio = activeAudios[index];
-            audio.pause();
+        async function reconnectStream(index) {
+            if (currentPlayingIndex !== index) return;
+            statusSpans[index].textContent = 'Reconectando...';
+            floatingStatus.textContent = 'Reconectando...';
+
+            const targetAudio = activeAudios[index];
+            const timestampUrl = stations[index].url + '?t=' + Date.now();
+
             if (hlsPlayers[index]) {
-                hlsPlayers[index].destroy();
-                hlsPlayers[index] = null;
+                hlsPlayers[index].stopLoad();
+                hlsPlayers[index].loadSource(timestampUrl);
+                hlsPlayers[index].startLoad();
+            } else {
+                targetAudio.src = timestampUrl;
+                targetAudio.load();
             }
-            audio.removeAttribute('src');
-            audio.load();
+
+            try {
+                await targetAudio.play();
+                statusSpans[index].textContent = 'En vivo';
+                floatingStatus.textContent = 'En vivo';
+            } catch (err) {
+                console.debug("Error en reconexión automática:", err);
+            }
+        }
+
+        // Sistema Watchdog: Revisa cada 6 segundos si el flujo está atascado
+        function startWatchdog() {
+            if (stallCheckTimer) clearInterval(stallCheckTimer);
+
+            stallCheckTimer = setInterval(() => {
+                if (currentPlayingIndex < 0) return;
+
+                const audio = activeAudios[currentPlayingIndex];
+                
+                if (!audio.paused && !audio.ended) {
+                    if (audio.currentTime === lastCurrentTime) {
+                        reconnectStream(currentPlayingIndex);
+                    }
+                    lastCurrentTime = audio.currentTime;
+                }
+            }, 6000);
+        }
+
+        function setupWebAudioGain(index) {
+            if (!gainNodes[index] && audioCtx) {
+                try {
+                    const source = audioCtx.createMediaElementSource(activeAudios[index]);
+                    const gainNode = audioCtx.createGain();
+                    source.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    gainNodes[index] = gainNode;
+                } catch (e) {
+                    console.debug('WebAudio binding:', e);
+                }
+            }
         }
 
         function updateMediaSession(index) {
@@ -755,7 +801,7 @@
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: station.name,
                     artist: 'Radios Streaming - Guatemala',
-                    album: 'Radios GUATE',
+                    album: 'LMB Desing',
                     artwork: [
                         { src: station.logo, sizes: '96x96', type: 'image/png' },
                         { src: station.logo, sizes: '128x128', type: 'image/png' },
@@ -771,73 +817,85 @@
         }
 
         async function handlePlayTrigger(index) {
-            const targetAudio = activeAudios[index];
-            const token = ++playRequestToken;
+            initAudioContext();
+            setupWebAudioGain(index);
 
-            if (currentPlayingIndex === index && (!targetAudio.paused || statusSpans[index].textContent === 'Conectando…')) {
+            const targetAudio = activeAudios[index];
+
+            if (currentPlayingIndex === index && !targetAudio.paused) {
                 stopStationAndReset(index);
                 return;
             }
 
-            activeAudios.forEach((aud, i) => {
-                if (i !== index) {
-                    destroyHlsPlayer(i);
-                    statusSpans[i].textContent = 'Listo';
-                }
+            activeAudios.forEach((aud, i) => { 
+                if (i !== index && !aud.paused) {
+                    stopStationAndReset(i);
+                } 
             });
 
             currentPlayingIndex = index;
             statusSpans[index].textContent = 'Conectando…';
-            floatingLogo.src = stations[index].logo;
-            floatingTitle.textContent = stations[index].name;
             floatingStatus.textContent = 'Conectando…';
-            floatingPlayer.classList.add('active');
-            syncUI();
 
-            attachHlsStream(index);
+            if (hlsPlayers[index]) {
+                hlsPlayers[index].stopLoad();
+                hlsPlayers[index].detachMedia();
+                hlsPlayers[index].attachMedia(targetAudio);
+                hlsPlayers[index].loadSource(stations[index].url + '?t=' + Date.now());
+                hlsPlayers[index].startLoad();
+            } else {
+                targetAudio.src = stations[index].url + '?t=' + Date.now();
+                targetAudio.load();
+            }
 
             try {
                 await targetAudio.play();
-                if (token !== playRequestToken) return;
                 updateMediaSession(index);
+                startWatchdog();
             } catch (err) {
-                if (token !== playRequestToken) return;
-                if (err.name === 'AbortError') {
-                    statusSpans[index].textContent = 'Pausado';
-                } else {
-                    statusSpans[index].textContent = 'Error al conectar';
-                    floatingStatus.textContent = 'Error al conectar';
-                }
-                syncUI();
+                statusSpans[index].textContent = 'Error al conectar';
             }
         }
 
         function stopStationAndReset(index) {
-            playRequestToken++;
-            destroyHlsPlayer(index);
-            statusSpans[index].textContent = 'Pausado';
-            if (currentPlayingIndex === index) {
-                floatingStatus.textContent = 'Pausado';
+            const audio = activeAudios[index];
+            audio.pause();
+
+            if (hlsPlayers[index]) {
+                hlsPlayers[index].stopLoad();
+            } else {
+                audio.removeAttribute('src');
+                audio.load();
             }
+            statusSpans[index].textContent = 'Pausado';
             syncUI();
+            
+            if (currentPlayingIndex === index) {
+                currentPlayingIndex = -1;
+                if (stallCheckTimer) clearInterval(stallCheckTimer);
+            }
         }
 
         function syncUI() {
             activeAudios.forEach((audio, idx) => {
                 const isPlaying = !audio.paused && !audio.ended;
-                const isConnecting = statusSpans[idx].textContent === 'Conectando…' || statusSpans[idx].textContent === 'Cargando…';
-                activeCards[idx].classList.toggle('playing', isPlaying || isConnecting);
-                playBtns[idx].innerHTML = (isPlaying || isConnecting) ? pauseIcon : playIcon;
+                activeCards[idx].classList.toggle('playing', isPlaying);
+                playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
+
+                if (!isPlaying && statusSpans[idx].textContent === 'En vivo') {
+                    statusSpans[idx].textContent = 'Pausado';
+                }
             });
 
             if (currentPlayingIndex >= 0) {
-                const idx = currentPlayingIndex;
-                const isPlaying = !activeAudios[idx].paused;
-                const isConnecting = statusSpans[idx].textContent === 'Conectando…' || statusSpans[idx].textContent === 'Cargando…';
-                floatingLogo.src = stations[idx].logo;
-                floatingTitle.textContent = stations[idx].name;
-                floatingPlayBtn.innerHTML = (isPlaying || isConnecting) ? pauseIcon : playIcon;
+                const isPlaying = !activeAudios[currentPlayingIndex].paused;
+                floatingLogo.src = stations[currentPlayingIndex].logo;
+                floatingTitle.textContent = stations[currentPlayingIndex].name;
+                floatingStatus.textContent = isPlaying ? 'En vivo' : 'Pausado';
+                floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
                 floatingPlayer.classList.add('active');
+            } else {
+                floatingPlayer.classList.remove('active');
             }
         }
 
