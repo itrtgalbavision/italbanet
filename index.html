@@ -1,610 +1,534 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Radios On Line GUATE</title>
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#0b0f19">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Radios GUATE">
-    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=2">
-    <link rel="icon" type="image/png" href="./icon.png?v=2">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        :root { --bg-color:#0b0f19; --card-bg:#131d31; --card-border:#1e293b; --accent-color:#38bdf8; --accent-glow:rgba(56,189,248,.25); --text-main:#f8fafc; --text-muted:#94a3b8; }
-        body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background-color:var(--bg-color); color:var(--text-main); margin:0; padding:20px 15px 120px 15px; display:flex; flex-direction:column; align-items:center; min-height:100vh; touch-action:manipulation; }
-        .container { width:100%; max-width:1100px; }
-        header { text-align:center; margin-bottom:20px; }
-        h1 { font-size:1.8rem; margin:0 0 6px 0; background:linear-gradient(135deg,#38bdf8,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        p.subtitle { color:var(--text-muted); font-size:.9rem; margin:0; }
-        .controls-container { margin-bottom:25px; display:flex; justify-content:center; align-items:center; gap:10px; width:100%; max-width:550px; margin-left:auto; margin-right:auto; }
-        .search-input { flex:1; background-color:var(--card-bg); border:1px solid var(--card-border); border-radius:25px; padding:12px 18px; color:var(--text-main); font-size:.95rem; outline:none; }
-        .search-input:focus { border-color:var(--accent-color); }
-        .refresh-btn { background-color:var(--card-bg); border:1px solid var(--card-border); color:var(--text-main); border-radius:25px; padding:11px 18px; font-size:.9rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
-        .refresh-btn:active { transform:scale(.96); background-color:#17233d; }
-        .refresh-btn svg { width:16px; height:16px; fill:currentColor; }
-        .grid-stations { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
-        .station-card { background-color:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:all .2s ease; position:relative; overflow:hidden; }
-        .station-card::before { content:""; position:absolute; bottom:-10px; right:-10px; width:110px; height:110px; background-image:var(--card-bg-logo); background-size:contain; background-repeat:no-repeat; background-position:bottom right; opacity:.05; pointer-events:none; }
-        .station-card.playing::before { opacity:.12; }
-        .station-card.playing { border-color:var(--accent-color); box-shadow:0 0 20px var(--accent-glow); background-color:#17233d; }
-        .station-card.connecting { border-color:#f59e0b; box-shadow:0 0 14px rgba(245,158,11,.25); }
-        .logo-container { width:100px; height:75px; background:#090d16; border-radius:12px; display:flex; justify-content:center; align-items:center; padding:6px; border:1px solid var(--card-border); position:relative; z-index:2; cursor:pointer; }
-        .station-logo { max-width:100%; max-height:100%; object-fit:contain; }
-        .station-info { text-align:center; width:100%; position:relative; z-index:2; }
-        .station-name { font-weight:700; font-size:1rem; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .status { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
-        .station-card.playing .status { color:#34d399; }
-        .station-card.connecting .status { color:#fbbf24; }
-        .custom-player { width:100%; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(11,15,25,.98)); border:1px solid rgba(56,189,248,.2); border-radius:20px; padding:6px 12px; box-sizing:border-box; gap:10px; position:relative; z-index:2; }
-        .station-card.playing .custom-player { border-color:rgba(56,189,248,.6); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 15px rgba(56,189,248,.25); }
-        .play-btn { background:linear-gradient(135deg,#38bdf8 0%,#0284c7 100%); border:none; width:42px; height:42px; border-radius:50%; color:#090d16; display:flex; justify-content:center; align-items:center; cursor:pointer; flex-shrink:0; position:relative; box-shadow:0 0 12px rgba(56,189,248,.4); transition:all .25s; -webkit-tap-highlight-color:transparent; }
-        .play-btn:hover { transform:scale(1.05); }
-        .play-btn:active { transform:scale(.95); }
-        .station-card.playing .play-btn { background:linear-gradient(135deg,#10b981 0%,#059669 100%); color:#022c22; }
-        .play-btn svg { width:20px; height:20px; fill:currentColor; }
-        .cyber-equalizer { display:flex; align-items:flex-end; gap:3px; height:18px; padding:0 4px; flex-grow:1; justify-content:center; opacity:.3; }
-        .station-card.playing .cyber-equalizer { opacity:1; }
-        .eq-bar { width:3px; background:var(--accent-color); border-radius:2px; height:20%; }
-        .station-card.playing .eq-bar:nth-child(1) { animation:eqAnim .8s ease-in-out infinite alternate; }
-        .station-card.playing .eq-bar:nth-child(2) { animation:eqAnim 1.1s ease-in-out infinite alternate .2s; }
-        .station-card.playing .eq-bar:nth-child(3) { animation:eqAnim .7s ease-in-out infinite alternate .4s; }
-        .station-card.playing .eq-bar:nth-child(4) { animation:eqAnim .9s ease-in-out infinite alternate .1s; }
-        @keyframes eqAnim { 0%{height:15%;background-color:#38bdf8} 50%{height:95%;background-color:#818cf8} 100%{height:35%;background-color:#34d399} }
-        .vol-btn-group { display:flex; align-items:center; gap:4px; background:rgba(30,41,59,.7); padding:4px; border-radius:20px; border:1px solid rgba(255,255,255,.05); }
-        .vol-mute-btn { background:transparent; border:none; color:var(--text-muted); display:flex; align-items:center; padding:6px; cursor:pointer; border-radius:50%; }
-        .vol-mute-btn.muted { color:#f43f5e; background:rgba(244,63,94,.15); }
-        .vol-mute-btn svg { width:18px; height:18px; fill:currentColor; }
-        .floating-player { position:fixed; bottom:0; left:0; width:100%; background:rgba(11,15,25,.88); backdrop-filter:blur(16px) saturate(180%); -webkit-backdrop-filter:blur(16px) saturate(180%); border-top:1px solid rgba(56,189,248,.3); padding:12px 20px; box-sizing:border-box; display:none; justify-content:space-between; align-items:center; z-index:1000; }
-        .floating-player.active { display:flex; }
-        .floating-info { display:flex; align-items:center; gap:14px; }
-        .floating-logo { width:44px; height:44px; object-fit:contain; background:#090d16; border-radius:10px; padding:4px; border:1px solid rgba(56,189,248,.3); }
-        .floating-text .title { font-weight:700; font-size:.95rem; }
-        .floating-text .desc { font-size:.75rem; color:#34d399; display:flex; align-items:center; gap:6px; font-weight:600; text-transform:uppercase; }
-        #pwa-install-banner { display:none; position:fixed; bottom:15px; left:50%; transform:translateX(-50%); width:90%; max-width:420px; background:var(--card-bg); color:var(--text-main); padding:16px; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.5); z-index:2000; border:1px solid var(--accent-color); }
-        @media (max-width:480px){ .controls-container{flex-direction:column} .search-input,.refresh-btn{width:100%;justify-content:center} }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GUATE SIGNAL // Radios Online</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GUATE SIGNAL">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=2">
+<link rel="icon" type="image/png" href="./icon.png?v=2">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+:root{--bg:#03050d;--panel:rgba(9,14,30,.86);--panel2:rgba(13,20,42,.92);--line:rgba(0,229,255,.22);--line2:rgba(255,255,255,.08);--cyan:#00e5ff;--magenta:#ff2d78;--violet:#8b5cf6;--lime:#00ff9d;--amber:#ffb020;--text:#eaf6ff;--muted:#8fa3c0}
+html{scrollbar-color:#00e5ff #04060f}
+body{margin:0;font-family:Rajdhani,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 120px;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,229,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.055) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at 50% 0%,black 30%,transparent 78%)}
+body:after{content:"";position:fixed;width:620px;height:620px;left:-180px;top:-220px;pointer-events:none;z-index:0;background:radial-gradient(circle,rgba(0,229,255,.18),transparent 62%);filter:blur(10px)}
+.glow2{position:fixed;width:520px;height:520px;right:-180px;top:32%;pointer-events:none;z-index:0;background:radial-gradient(circle,rgba(255,45,120,.14),transparent 62%)}
+a{color:inherit}
+button{font-family:inherit}
+.mono{font-family:"JetBrains Mono",monospace}
+.shell{position:relative;z-index:2;width:100%;max-width:1320px;margin:0 auto;padding:0 18px}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;margin:0 -18px 18px;background:rgba(3,5,13,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo-mark{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(135deg,#00e5ff,#8b5cf6);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);font-family:Orbitron,sans-serif;font-weight:900;color:#02060f;font-size:19px;box-shadow:0 0 22px rgba(0,229,255,.55)}
+.brand h1{font-family:Orbitron,sans-serif;font-size:19px;line-height:1;margin:0;letter-spacing:1.5px}
+.brand h1 span{color:var(--cyan)}
+.brand small{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2.5px;color:var(--muted);margin-top:3px}
+.top-hud{display:flex;align-items:center;gap:10px}
+.hud-chip{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(0,229,255,.06);padding:8px 11px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:1px;border-radius:999px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px var(--lime);animation:blink 1.6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.clock{font-variant-numeric:tabular-nums}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(14px);position:relative;overflow:hidden}
+.panel:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),var(--magenta),transparent)}
+.now-playing{position:sticky;top:76px;padding:18px;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
+.np-head{display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
+.np-head b{color:var(--cyan)}
+.np-logo-wrap{margin:18px 0 14px;height:168px;border:1px solid var(--line2);background:#05080f;display:grid;place-items:center;position:relative;overflow:hidden}
+.np-logo-wrap:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 62%,rgba(0,229,255,.08));pointer-events:none}
+.np-logo{max-width:82%;max-height:82%;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.7))}
+.np-empty{font-family:"JetBrains Mono",monospace;color:var(--muted);font-size:12px;letter-spacing:1px;text-align:center;padding:0 12px}
+.np-freq{font-family:Orbitron,sans-serif;font-size:34px;line-height:1;letter-spacing:1px;margin:4px 0 2px}
+.np-freq small{font-size:14px;color:var(--cyan)}
+.np-name{font-size:22px;font-weight:700;line-height:1.1;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-status{margin:8px 0 0;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;color:var(--lime);text-transform:uppercase}
+.wave{display:flex;align-items:flex-end;gap:3px;height:52px;margin:16px 0 6px;padding:8px 2px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.wave span{flex:1;background:linear-gradient(180deg,var(--cyan),var(--violet));border-radius:2px;height:12%;min-height:4px}
+.now-playing.playing .wave span{animation:waveA .7s ease-in-out infinite alternate}
+.now-playing.playing .wave span:nth-child(3n){animation-duration:.9s;animation-delay:.15s}
+.now-playing.playing .wave span:nth-child(4n){animation-duration:1.1s;animation-delay:.3s}
+.now-playing.playing .wave span:nth-child(5n){animation-duration:.6s;animation-delay:.05s}
+@keyframes waveA{from{height:12%}to{height:96%}}
+.np-controls{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 8px}
+.np-btn{width:44px;height:44px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.np-btn:active{transform:scale(.94)}
+.np-play{width:62px;height:62px;background:linear-gradient(135deg,var(--cyan),#0284c7);color:#02060f;border:none;box-shadow:0 0 26px rgba(0,229,255,.55)}
+.now-playing.playing .np-play{background:linear-gradient(135deg,var(--lime),#059669);box-shadow:0 0 26px rgba(0,255,157,.5)}
+.np-btn svg{width:20px;height:20px;fill:currentColor}
+.np-play svg{width:24px;height:24px}
+.np-meta{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
+.mini-stat{flex:1;border:1px solid var(--line2);padding:9px 10px;background:rgba(255,255,255,.02)}
+.mini-stat label{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:2px;color:var(--muted)}
+.mini-stat b{display:block;font-size:14px;margin-top:2px}
+.signal{display:flex;align-items:flex-end;gap:3px;height:16px;margin-top:4px}
+.signal i{display:block;width:4px;background:#22304d;border-radius:1px}
+.signal i:nth-child(1){height:5px}.signal i:nth-child(2){height:8px}.signal i:nth-child(3){height:11px}.signal i:nth-child(4){height:15px}
+.signal.on i{background:var(--lime);box-shadow:0 0 8px rgba(0,255,157,.5)}
+.signal.mid i:nth-child(-n+2){background:var(--amber)}
+.stations-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:2px 0 14px}
+.stations-head h2{font-family:Orbitron,sans-serif;font-size:24px;line-height:1.05;margin:0;letter-spacing:1px}
+.stations-head h2 span{color:var(--cyan)}
+.stations-head p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.count{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:1.5px;border:1px solid var(--line);padding:8px 10px;white-space:nowrap}
+.controls{display:flex;gap:10px;margin-bottom:16px}
+.search-wrap{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);padding:0 14px}
+.search-wrap span{font-size:18px}
+.search-input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-family:Rajdhani,sans-serif;font-size:16px;font-weight:600;padding:13px 0}
+.search-input::placeholder{color:#6b7f9e}
+.refresh-btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:12px 16px;font-weight:700;letter-spacing:.5px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.refresh-btn:hover{border-color:var(--cyan);box-shadow:0 0 16px rgba(0,229,255,.25)}
+.refresh-btn svg{width:16px;height:16px;fill:currentColor}
+.grid-stations{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
+.station-card{background:linear-gradient(180deg,rgba(16,25,50,.96),rgba(7,11,24,.96));border:1px solid rgba(0,229,255,.16);padding:14px;position:relative;overflow:hidden;transition:transform .18s,border-color .18s,box-shadow .18s;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%)}
+.station-card:hover{transform:translateY(-3px);border-color:rgba(0,229,255,.55);box-shadow:0 14px 30px rgba(0,0,0,.45),0 0 22px rgba(0,229,255,.18)}
+.station-card.playing{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(0,229,255,.35),0 0 28px rgba(0,229,255,.28);background:linear-gradient(180deg,rgba(0,229,255,.10),rgba(7,11,24,.96))}
+.station-card.connecting{border-color:var(--amber);box-shadow:0 0 22px rgba(255,176,32,.22)}
+.card-top{display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.5px;color:var(--muted);margin-bottom:11px}
+.card-top b{color:var(--cyan)}
+.card-dot{width:8px;height:8px;border-radius:50%;background:#33415e}
+.station-card.playing .card-dot{background:var(--lime);box-shadow:0 0 10px var(--lime)}
+.station-card.connecting .card-dot{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.logo-container{height:82px;background:#04070f;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;padding:8px;position:relative;cursor:pointer}
+.logo-container:before,.logo-container:after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--cyan)}
+.logo-container:before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.logo-container:after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+.station-logo{max-width:100%;max-height:100%;object-fit:contain}
+.station-info{text-align:left;margin:12px 0}
+.station-name{font-weight:700;font-size:18px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.station-card.playing .status{color:var(--lime)}
+.station-card.connecting .status{color:var(--amber)}
+.custom-player{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.32);border:1px solid var(--line2);padding:6px;border-radius:999px}
+.play-btn{width:42px;height:42px;flex:0 0 auto;border:0;background:linear-gradient(135deg,var(--cyan),#0284c7);color:#02060f;border-radius:50%;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 16px rgba(0,229,255,.45)}
+.play-btn:active{transform:scale(.94)}
+.station-card.playing .play-btn{background:linear-gradient(135deg,var(--lime),#059669);box-shadow:0 0 18px rgba(0,255,157,.55)}
+.play-btn svg{width:19px;height:19px;fill:currentColor}
+.cyber-equalizer{display:flex;align-items:flex-end;gap:3px;height:20px;flex:1;justify-content:center;opacity:.35}
+.station-card.playing .cyber-equalizer{opacity:1}
+.eq-bar{width:3px;background:var(--cyan);border-radius:2px;height:18%}
+.station-card.playing .eq-bar:nth-child(1){animation:eqAnim .7s ease-in-out infinite alternate}
+.station-card.playing .eq-bar:nth-child(2){animation:eqAnim 1s ease-in-out infinite alternate .15s}
+.station-card.playing .eq-bar:nth-child(3){animation:eqAnim .8s ease-in-out infinite alternate .3s}
+.station-card.playing .eq-bar:nth-child(4){animation:eqAnim 1.1s ease-in-out infinite alternate .05s}
+.station-card.playing .eq-bar:nth-child(5){animation:eqAnim .65s ease-in-out infinite alternate .2s}
+.station-card.playing .eq-bar:nth-child(6){animation:eqAnim .9s ease-in-out infinite alternate .1s}
+@keyframes eqAnim{0%{height:15%}50%{height:100%}100%{height:35%}}
+.vol-btn-group{display:flex}
+.vol-mute-btn{width:34px;height:34px;border:0;background:rgba(255,255,255,.06);color:var(--muted);border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.vol-mute-btn.muted{color:#ff5d7a;background:rgba(255,45,120,.15)}
+.vol-mute-btn svg{width:17px;height:17px;fill:currentColor}
+.foot{margin-top:22px;display:flex;justify-content:space-between;gap:12px;color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:1px;flex-wrap:wrap}
+.floating-player{position:fixed;left:12px;right:12px;bottom:12px;z-index:80;display:none;align-items:center;gap:12px;background:rgba(4,7,16,.92);backdrop-filter:blur(18px);border:1px solid rgba(0,229,255,.35);padding:10px 10px 10px 12px;box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.floating-player.active{display:flex}
+.floating-info{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
+.floating-logo{width:44px;height:44px;object-fit:contain;background:#05080f;border:1px solid var(--line2);padding:4px;flex:0 0 auto}
+.floating-text{min-width:0}
+.floating-text .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.floating-text .desc{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.5px;color:var(--lime);text-transform:uppercase}
+#pwa-install-banner{display:none;position:fixed;left:50%;bottom:86px;transform:translateX(-50%);width:calc(100% - 24px);max-width:440px;z-index:200;background:#0a1126;border:1px solid var(--cyan);padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+@media(min-width:1024px){.floating-player{display:none!important}.layout{grid-template-columns:370px 1fr}}
+@media(max-width:1023px){
+  .top-hud .hide-m{display:none}
+  .layout{grid-template-columns:1fr}
+  .now-playing{position:static;clip-path:none;padding:16px}
+  .np-logo-wrap{height:120px;margin:12px 0}
+  .np-freq{font-size:28px}
+  .stations-head h2{font-size:21px}
+  body{padding-bottom:110px}
+}
+@media(max-width:560px){
+  .shell{padding:0 12px}
+  .topbar{margin:0 -12px 14px;padding:10px 12px}
+  .brand h1{font-size:15px}
+  .brand small{font-size:8px}
+  .logo-mark{width:38px;height:38px;font-size:16px}
+  .top-hud{justify-content:flex-end}
+  .clock{display:none}
+  .layout{gap:14px}
+  .now-playing{padding:14px}
+  .np-controls{gap:10px}
+  .controls{flex-direction:column}
+  .refresh-btn{justify-content:center}
+  .grid-stations{grid-template-columns:1fr 1fr;gap:10px}
+  .station-card{padding:11px}
+  .logo-container{height:64px}
+  .station-name{font-size:15px}
+  .custom-player{gap:6px;padding:5px}
+  .play-btn{width:38px;height:38px}
+  .vol-mute-btn{width:30px;height:30px}
+  .stations-head{align-items:flex-start}
+  .count{display:none}
+  .np-meta{flex-direction:column}
+  .foot{justify-content:center;text-align:center}
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header><h1>Radios Streaming - GUATEMALA</h1><p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p></header>
-        <div class="controls-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora...">
-            <button id="refreshBtn" class="refresh-btn" title="Reiniciar Página"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Actualizar</button>
-        </div>
-        <div class="grid-stations" id="stationsGrid"></div>
+<div class="glow2"></div>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><div class="logo-mark">G</div><div><h1>GUATE <span>SIGNAL</span></h1><small>RADIOS ONLINE // GUATEMALA</small></div></div>
+    <div class="top-hud">
+      <div class="hud-chip hide-m"><span class="dot"></span> SISTEMA EN LINEA</div>
+      <div class="hud-chip hide-m">12 NODOS ACTIVOS</div>
+      <div class="hud-chip"><span class="clock" id="clock">00:00:00</span> GT</div>
     </div>
-    <div id="pwa-install-banner">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><strong style="font-size:16px;color:var(--accent-color);">📲 Instalar App Radios</strong><button onclick="cerrarBanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>
-        <p id="pwa-banner-text" style="font-size:.88rem;line-height:1.4;margin:0 0 14px 0;color:var(--text-muted);">Instala esta aplicación en tu pantalla de inicio para acceder rápidamente.</p>
-        <button id="pwa-install-btn" style="display:none;width:100%;background:var(--accent-color);color:#0b0f19;border:none;padding:10px;border-radius:10px;font-weight:bold;cursor:pointer;">Instalar en la pantalla de inicio</button>
-    </div>
-    <div class="floating-player" id="floatingPlayer">
-        <div class="floating-info"><img id="floatingLogo" src="" alt="" class="floating-logo"><div class="floating-text"><div class="title" id="floatingTitle">Sin selección</div><div class="desc" id="floatingStatus">En vivo</div></div></div>
-        <button class="play-btn" id="floatingPlayBtn" title="Play/Pause"><svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
-    </div>
+  </header>
 
-    <!-- FIX 3: SIN crossorigin="anonymous".
-         Con crossorigin, el fallback nativo (Safari) exige CORS aunque el link directo no lo exige.
-         Hls.js ya hace fetch con CORS por su cuenta, no necesita este atributo. -->
-    <audio id="mainPlayer" preload="none" playsinline></audio>
+  <main class="layout">
+    <aside class="panel now-playing" id="nowPlayingPanel">
+      <div class="np-head"><span>AHORA <b>SONANDO</b></span><span>CH-01 // LIVE</span></div>
+      <div class="np-logo-wrap">
+        <img id="npLogo" class="np-logo" src="" alt="" style="display:none">
+        <div id="npEmpty" class="np-empty">SELECCIONA UNA FRECUENCIA<br>PARA INICIAR TRANSMISION</div>
+      </div>
+      <div class="np-freq" id="npFreq">--.-- <small>FM</small></div>
+      <h2 class="np-name" id="npName">Sin seleccion</h2>
+      <div class="np-status" id="npStatus">EN ESPERA</div>
+      <div class="wave" id="npWave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="np-controls">
+        <button class="np-btn" id="npPrevBtn" title="Anterior"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM18 6l-8.5 6L18 18z"/></svg></button>
+        <button class="np-btn np-play" id="npPlayBtn" title="Play / Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="np-btn" id="npNextBtn" title="Siguiente"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg></button>
+      </div>
+      <div class="np-meta">
+        <div class="mini-stat"><label>SENAL</label><div class="signal" id="npSignal"><i></i><i></i><i></i><i></i></div></div>
+        <div class="mini-stat"><label>FUENTE</label><b id="npSource">HLS // CLOUD</b></div>
+        <div class="mini-stat"><label>VOLUMEN</label><b id="npVol">100%</b></div>
+      </div>
+    </aside>
 
-    <script>
-        const stations = [
-            { name: "Xtrema 101.3", url: "https://ddycmnicl95kp.cloudfront.net/live/8bp8yay2zaog/master.m3u8", logo: "xtrema.png" },
-            { name: "La Marca 94.1", url: "https://ddycmnicl95kp.cloudfront.net/live/x9til9l95v7l/master.m3u8", logo: "lamarca.png" },
-            { name: "Galaxia 88.5", url: "https://ddycmnicl95kp.cloudfront.net/live/3r10218cqvb6/master.m3u8", logo: "galaxia.png" },
-            { name: "Tropicalida 104.9", url: "https://ddycmnicl95kp.cloudfront.net/live/5hic8sbcobol/master.m3u8", logo: "tropicalida.png" },
-            { name: "Alfa 97.3", url: "https://ddycmnicl95kp.cloudfront.net/live/r0nwiyol2l12/master.m3u8", logo: "alfa.png" },
-            { name: "Exitos 90.9", url: "https://ddycmnicl95kp.cloudfront.net/live/yff15vi5xsxi/master.m3u8", logo: "exitos.png" },
-            { name: "Fiesta 98.5", url: "https://ddycmnicl95kp.cloudfront.net/live/h8fdwk021ch2/master.m3u8", logo: "fiesta.png" },
-            { name: "Joya 92.9", url: "https://ddycmnicl95kp.cloudfront.net/live/5zgdqpigoa9d/master.m3u8", logo: "joya.png" },
-            { name: "Ranchera 95.7", url: "https://ddycmnicl95kp.cloudfront.net/live/051kh1xde9ws/master.m3u8", logo: "ranchera.png" },
-            { name: "Sonora 96.9", url: "https://ddycmnicl95kp.cloudfront.net/live/6on6zmhisqhm/master.m3u8", logo: "sonora.png" },
-            { name: "Exitos XELA 107.1", url: "https://ddycmnicl95kp.cloudfront.net/live/vk54lkazkyxg/master.m3u8", logo: "exitosx.png" },
-            { name: "Flix Xela 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8", logo: "flix.png" }
-        ];
+    <section>
+      <div class="stations-head">
+        <div><h2>SELECCIONA<br><span>FRECUENCIA</span></h2><p>Toca una tarjeta para conectar. El sistema elige la mejor senal disponible.</p></div>
+        <div class="count">12 / 12 EMISORAS</div>
+      </div>
+      <div class="controls">
+        <label class="search-wrap"><span>⌕</span><input type="text" id="searchInput" class="search-input" placeholder="Buscar emisora, ejemplo: Exitos, Xtrema..."></label>
+        <button id="refreshBtn" class="refresh-btn" title="Reiniciar pagina"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>REINICIAR</button>
+      </div>
+      <div class="grid-stations" id="stationsGrid"></div>
+      <div class="foot"><span>GUATE SIGNAL v3 // HLS ADAPTATIVO</span><span>HECHO EN GUATEMALA</span></div>
+    </section>
+  </main>
+</div>
 
-        const audio = document.getElementById('mainPlayer');
-        let hls = null;
-        let currentIndex = -1;
-        let playToken = 0;
-        let isConnecting = false;
-        let hasLoadedSource = false; // true cuando ya hay manifest / canplay, aunque play() haya sido bloqueado
-        let variantList = []; // URLs ordenadas por steering para la radio actual
-        let variantIndex = 0;
-        let retryTimer = null;
-        let connectTimeout = null;
-        let stallTimer = null;
-        let lastTime = -1;
-        let stallCount = 0;
-        let isMuted = false;
-        let userRequestedStop = false; // true SOLO si el usuario tocó pausar
-        let wasPlaying = false; // true cuando ya sonó al menos una vez
-        let consecutiveFatal = 0;
-        let lastFatalAt = 0;
-        let isLoadingVariant = false; // true mientras loadOneVariant espera MANIFEST_PARSED
-        let resumeTimer = null;
+<div id="pwa-install-banner">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><strong style="font-family:Orbitron,sans-serif;color:var(--cyan);letter-spacing:1px">INSTALAR APP</strong><button onclick="cerrarBanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">✕</button></div>
+  <p id="pwa-banner-text" style="font-size:.92rem;line-height:1.4;margin:0 0 14px 0;color:var(--muted)">Instala esta aplicacion en tu pantalla de inicio para acceder rapido.</p>
+  <button id="pwa-install-btn" style="display:none;width:100%;background:var(--cyan);color:#02060f;border:none;padding:11px;border-radius:6px;font-weight:800;cursor:pointer;letter-spacing:1px">INSTALAR EN PANTALLA DE INICIO</button>
+</div>
 
-        const gridContainer = document.getElementById('stationsGrid');
-        const activeCards = [];
-        const playBtns = [];
-        const statusSpans = [];
-        const muteBtns = [];
-        const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
-        const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-        const iconVolHigh = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
-        const iconMute = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
-        const floatingPlayer = document.getElementById('floatingPlayer');
-        const floatingPlayBtn = document.getElementById('floatingPlayBtn');
-        const floatingTitle = document.getElementById('floatingTitle');
-        const floatingStatus = document.getElementById('floatingStatus');
-        const floatingLogo = document.getElementById('floatingLogo');
-        const hlsSupported = () => window.Hls && Hls.isSupported();
-        const nativeHlsSupported = () => audio.canPlayType('application/vnd.apple.mpegurl');
+<div class="floating-player" id="floatingPlayer">
+  <div class="floating-info"><img id="floatingLogo" src="" alt="" class="floating-logo"><div class="floating-text"><div class="title" id="floatingTitle">Sin seleccion</div><div class="desc" id="floatingStatus">En vivo</div></div></div>
+  <button class="play-btn" id="floatingPlayBtn" title="Play/Pause"><svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+</div>
 
-        // PWA (sin cambios)
-        let deferredPrompt;
-        const banner = document.getElementById('pwa-install-banner');
-        const bannerText = document.getElementById('pwa-banner-text');
-        const installBtn = document.getElementById('pwa-install-btn');
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-        if (!isStandalone) {
-            if (isIOS) { bannerText.innerHTML = 'Para guardar como App en tu iPhone:<br>1. Toca el botón <strong>Compartir</strong> (<span style="font-size:16px;">⎘</span>)<br>2. Elige <strong>"Añadir a pantalla de inicio"</strong>.'; banner.style.display = 'block'; }
-            else { window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; bannerText.textContent = 'Añade Radios Streaming a tu pantalla de inicio para un acceso rápido.'; installBtn.style.display = 'block'; banner.style.display = 'block'; }); }
-        }
-        installBtn.addEventListener('click', () => { banner.style.display = 'none'; if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; }); } });
-        function cerrarBanner() { banner.style.display = 'none'; }
+<!-- Un solo reproductor, sin crossorigin para que el fallback nativo funcione como el link directo -->
+<audio id="mainPlayer" preload="none" playsinline></audio>
 
-        stations.forEach((station, index) => {
-            const card = document.createElement('div');
-            card.className = 'station-card';
-            card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
-            card.innerHTML = `<div class="logo-container"><img src="${station.logo}" alt="${station.name}" class="station-logo" loading="lazy" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'"></div><div class="station-info"><div class="station-name">${station.name}</div><div class="status">Listo</div></div><div class="custom-player"><button class="play-btn" title="Reproducir">${playIcon}</button><div class="cyber-equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div><div class="vol-btn-group"><button class="vol-mute-btn" title="Silenciar">${iconVolHigh}</button></div></div>`;
-            gridContainer.appendChild(card);
-            const playBtn = card.querySelector('.play-btn');
-            const status = card.querySelector('.status');
-            const muteBtn = card.querySelector('.vol-mute-btn');
-            activeCards.push(card); playBtns.push(playBtn); statusSpans.push(status); muteBtns.push(muteBtn);
-            playBtn.addEventListener('click', () => handlePlayTrigger(index));
-            muteBtn.addEventListener('click', toggleMute);
-            card.querySelector('.logo-container').addEventListener('click', () => handlePlayTrigger(index));
-        });
+<script>
+const stations = [
+  { name: "Xtrema 101.3", url: "https://ddycmnicl95kp.cloudfront.net/live/8bp8yay2zaog/master.m3u8", logo: "xtrema.png" },
+  { name: "La Marca 94.1", url: "https://ddycmnicl95kp.cloudfront.net/live/x9til9l95v7l/master.m3u8", logo: "lamarca.png" },
+  { name: "Galaxia 88.5", url: "https://ddycmnicl95kp.cloudfront.net/live/3r10218cqvb6/master.m3u8", logo: "galaxia.png" },
+  { name: "Tropicalida 104.9", url: "https://ddycmnicl95kp.cloudfront.net/live/5hic8sbcobol/master.m3u8", logo: "tropicalida.png" },
+  { name: "Alfa 97.3", url: "https://ddycmnicl95kp.cloudfront.net/live/r0nwiyol2l12/master.m3u8", logo: "alfa.png" },
+  { name: "Exitos 90.9", url: "https://ddycmnicl95kp.cloudfront.net/live/yff15vi5xsxi/master.m3u8", logo: "exitos.png" },
+  { name: "Fiesta 98.5", url: "https://ddycmnicl95kp.cloudfront.net/live/h8fdwk021ch2/master.m3u8", logo: "fiesta.png" },
+  { name: "Joya 92.9", url: "https://ddycmnicl95kp.cloudfront.net/live/5zgdqpigoa9d/master.m3u8", logo: "joya.png" },
+  { name: "Ranchera 95.7", url: "https://ddycmnicl95kp.cloudfront.net/live/051kh1xde9ws/master.m3u8", logo: "ranchera.png" },
+  { name: "Sonora 96.9", url: "https://ddycmnicl95kp.cloudfront.net/live/6on6zmhisqhm/master.m3u8", logo: "sonora.png" },
+  { name: "Exitos XELA 107.1", url: "https://ddycmnicl95kp.cloudfront.net/live/vk54lkazkyxg/master.m3u8", logo: "exitosx.png" },
+  { name: "Flix Xela 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8", logo: "flix.png" }
+];
+function freqOf(name){ const m = name.match(/(\d+\.\d+)/); return m ? m[1] : "--.--"; }
+function shortName(name){ return name.replace(/\s*\d+\.\d+.*$/, ""); }
 
-        // ============ FIX 1: RESOLVER STEERING NOSOTROS, NO DEJAR QUE HLS.JS ADIVINE ============
-        // El master trae 2 variantes con PATHWAY-ID distinto. Leemos el steering JSON,
-        // ordenamos por PATHWAY-PRIORITY y cargamos la variante directamente.
-        // Si la primera variante está muerta, pasamos a la segunda, no recargamos el mismo master.
-        function parseMaster(text, masterUrl) {
-            const lines = text.split(/\r?\n/);
-            const variants = [];
-            let steeringUri = null, defaultPathway = null;
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('#EXT-X-CONTENT-STEERING:')) {
-                    const mUri = line.match(/SERVER-URI="([^"]+)"/);
-                    const mPath = line.match(/PATHWAY-ID="([^"]+)"/);
-                    if (mUri) steeringUri = mUri[1];
-                    if (mPath) defaultPathway = mPath[1];
-                }
-                if (line.startsWith('#EXT-X-STREAM-INF:')) {
-                    const mPath = line.match(/PATHWAY-ID="([^"]+)"/);
-                    // La siguiente línea no vacía y que no empieza con # es la URL
-                    for (let j = i + 1; j < lines.length; j++) {
-                        const u = lines[j].trim();
-                        if (!u) continue;
-                        if (u.startsWith('#')) break;
-                        try { variants.push({ url: new URL(u, masterUrl).href, pathway: mPath ? mPath[1] : '' }); } catch(e) { variants.push({ url: u, pathway: mPath ? mPath[1] : '' }); }
-                        break;
-                    }
-                }
-            }
-            return { variants, steeringUri, defaultPathway };
-        }
+const audio = document.getElementById('mainPlayer');
+let hls = null, currentIndex = -1, playToken = 0, isConnecting = false, hasLoadedSource = false;
+let variantList = [], variantIndex = 0, retryTimer = null, connectTimeout = null, stallTimer = null, lastTime = -1, stallCount = 0, isMuted = false;
+let userRequestedStop = false, wasPlaying = false, consecutiveFatal = 0, lastFatalAt = 0, isLoadingVariant = false, resumeTimer = null;
 
-        async function fetchWithTimeout(url, ms = 6000) {
-            const ctrl = new AbortController();
-            const t = setTimeout(() => ctrl.abort(), ms);
-            try { const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' }); return r; }
-            finally { clearTimeout(t); }
-        }
+const gridContainer = document.getElementById('stationsGrid');
+const activeCards = [], playBtns = [], statusSpans = [], muteBtns = [];
+const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+const iconVolHigh = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
+const iconMute = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
 
-        async function getOrderedVariants(masterUrl) {
-            try {
-                const res = await fetchWithTimeout(masterUrl, 6000);
-                if (!res.ok) throw new Error('master HTTP ' + res.status);
-                const text = await res.text();
-                // Si no es un master con steering, no hay nada que ordenar
-                if (!text.includes('#EXT-X-STREAM-INF')) return [masterUrl];
-                const { variants, steeringUri, defaultPathway } = parseMaster(text, masterUrl);
-                if (!variants.length) return [masterUrl];
-                let priority = [];
-                if (steeringUri) {
-                    try {
-                        const sUrl = new URL(steeringUri, masterUrl);
-                        // MediaPackage espera el pathway actual como parámetro
-                        if (defaultPathway) sUrl.searchParams.set('_HLS_pathway', defaultPathway);
-                        const sRes = await fetchWithTimeout(sUrl.href, 5000);
-                        if (sRes.ok) {
-                            const sj = await sRes.json();
-                            priority = sj['PATHWAY-PRIORITY'] || sj['PATHWAY-PRIORITY'.toLowerCase()] || sj.pathwayPriority || [];
-                        }
-                    } catch(e) { console.debug('[Steering] no se pudo leer steering, uso default', e); }
-                }
-                if (!priority.length && defaultPathway) priority = [defaultPathway];
-                const ordered = [...variants].sort((a, b) => {
-                    const ia = priority.indexOf(a.pathway), ib = priority.indexOf(b.pathway);
-                    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-                });
-                console.debug('[Steering] orden:', ordered.map(v => v.pathway + ' -> ' + v.url));
-                return ordered.map(v => v.url);
-            } catch (e) {
-                // Si fetch falla por CORS, devolvemos el master para que Hls.js lo intente igual.
-                // En ese caso el fallback nativo de abajo es el que salva en Safari.
-                console.debug('[Steering] fetch master falló, uso master directo', e);
-                return [masterUrl];
-            }
-        }
+const floatingPlayer = document.getElementById('floatingPlayer');
+const floatingPlayBtn = document.getElementById('floatingPlayBtn');
+const floatingTitle = document.getElementById('floatingTitle');
+const floatingStatus = document.getElementById('floatingStatus');
+const floatingLogo = document.getElementById('floatingLogo');
+const npPanel = document.getElementById('nowPlayingPanel');
+const npLogo = document.getElementById('npLogo');
+const npEmpty = document.getElementById('npEmpty');
+const npFreq = document.getElementById('npFreq');
+const npName = document.getElementById('npName');
+const npStatus = document.getElementById('npStatus');
+const npPlayBtn = document.getElementById('npPlayBtn');
+const npPrevBtn = document.getElementById('npPrevBtn');
+const npNextBtn = document.getElementById('npNextBtn');
+const npSignal = document.getElementById('npSignal');
+const npSource = document.getElementById('npSource');
+const npVol = document.getElementById('npVol');
+const hlsSupported = () => window.Hls && Hls.isSupported();
+const nativeHlsSupported = () => audio.canPlayType('application/vnd.apple.mpegurl');
 
-        // ============ HLS ============
-        function ensureHls() {
-            if (hls || !hlsSupported()) return hls;
-            hls = new Hls({
-                enableWorker: true,
-                lowLatencyMode: false,
-                liveSyncDurationCount: 3,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
-                manifestLoadingMaxRetry: 2,
-                levelLoadingMaxRetry: 3,
-                fragLoadingMaxRetry: 3,
-                manifestLoadingRetryDelay: 1000,
-                levelLoadingRetryDelay: 1000,
-                fragLoadingRetryDelay: 1000,
-            });
-            hls.attachMedia(audio);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                if (hls._token !== playToken) return;
-                hasLoadedSource = true;
-                if (currentIndex >= 0 && audio.paused) {
-                    const p = audio.play();
-                    if (p) p.catch(err => handlePlayBlocked(err));
-                }
-            });
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (hls._token !== playToken) return;
-                if (!data.fatal) return;
-                // Si loadOneVariant ya está manejando este error, no hacer doble failover
-                if (isLoadingVariant) return;
-                console.debug('[HLS]', data.type, data.details, 'variante', variantIndex + 1, '/', variantList.length, 'wasPlaying=', wasPlaying);
-                if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                    try { hls.recoverMediaError(); return; } catch(e) {}
-                }
-                // Ya estaba sonando: un fragmento malo NO es motivo para destruir el stream.
-                // Primero reintentar la MISMA variante, solo cambiar de pathway si falla 3 veces seguidas.
-                if (wasPlaying) {
-                    const now = Date.now();
-                    consecutiveFatal = (now - lastFatalAt < 15000) ? consecutiveFatal + 1 : 1;
-                    lastFatalAt = now;
-                    if (consecutiveFatal < 3) {
-                        setStatus(currentIndex, 'Reconectando…');
-                        try { hls.startLoad(); } catch(e) {}
-                        return;
-                    }
-                    consecutiveFatal = 0;
-                }
-                // Aún no sonó: sí tiene sentido probar la siguiente variante de una vez
-                failoverToNextVariant();
-            });
-            return hls;
-        }
-        function destroyHls() { if (hls) { try { hls.destroy(); } catch(e){} hls = null; } }
+// Reloj HUD
+function tickClock(){ const d = new Date(); document.getElementById('clock').textContent = String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0')+":"+String(d.getSeconds()).padStart(2,'0'); }
+tickClock(); setInterval(tickClock, 1000);
 
-        // Carga UNA variante y espera MANIFEST_PARSED o error fatal / timeout.
-        // Devuelve true si el manifest cargó, false si hay que probar la siguiente.
-        function loadOneVariant(url, token) {
-            return new Promise((resolve) => {
-                isLoadingVariant = true;
-                destroyHls();
-                ensureHls();
-                if (!hls) { resolve(false); return; }
-                hls._token = token;
-                let settled = false;
-                const timer = setTimeout(() => { if (!settled) { settled = true; cleanup(); resolve(false); } }, 9000);
-                const onParsed = () => { if (settled) return; settled = true; cleanup(); resolve(true); };
-                const onError = (e, data) => { if (!data.fatal || settled) return; settled = true; cleanup(); resolve(false); };
-                const cleanup = () => { clearTimeout(timer); isLoadingVariant = false; try { hls.off(Hls.Events.MANIFEST_PARSED, onParsed); } catch(e){} try { hls.off(Hls.Events.ERROR, onError); } catch(e){} };
-                hls.on(Hls.Events.MANIFEST_PARSED, onParsed);
-                hls.on(Hls.Events.ERROR, onError);
-                hls.loadSource(url);
-            });
-        }
+// PWA
+let deferredPrompt;
+const banner = document.getElementById('pwa-install-banner');
+const bannerText = document.getElementById('pwa-banner-text');
+const installBtn = document.getElementById('pwa-install-btn');
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (!isStandalone) {
+  if (isIOS) { bannerText.innerHTML = 'Para guardar como App en tu iPhone:<br>1. Toca Compartir<br>2. Elige "Anadir a pantalla de inicio".'; banner.style.display = 'block'; }
+  else { window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; bannerText.textContent = 'Anade GUATE SIGNAL a tu pantalla de inicio para acceso rapido.'; installBtn.style.display = 'block'; banner.style.display = 'block'; }); }
+}
+installBtn.addEventListener('click', () => { banner.style.display = 'none'; if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; }); } });
+function cerrarBanner() { banner.style.display = 'none'; }
 
-        function failoverToNextVariant() {
-            if (playToken === 0 || currentIndex < 0) return;
-            if (failoverToNextVariant._busy) return;
-            failoverToNextVariant._busy = true;
-            setTimeout(() => { failoverToNextVariant._busy = false; }, 800);
-            const next = variantIndex + 1;
-            if (next < variantList.length) {
-                variantIndex = next;
-                setStatus(currentIndex, `Probando otra señal… (${next + 1}/${variantList.length})`);
-                const token = playToken;
-                // Si ya estaba sonando, NO hacer destroyHls(): eso dispara 'pause' + 'emptied'
-                // y deja al audio en Pausado. Reutilizar la misma instancia con loadSource().
-                if (wasPlaying && hls) {
-                    try {
-                        hls._token = token;
-                        hls.stopLoad();
-                        hls.loadSource(variantList[next]);
-                        // No llamar audio.play() aquí: si ya estaba sonando, el elemento sigue
-                        // en estado "playing" y Hls.js reanuda solo. Forzar play() fuera de gesto
-                        // en iOS lo bloquea y lo deja en Pausado.
-                        return;
-                    } catch(e) { /* caer al camino de loadOneVariant */ }
-                }
-                loadOneVariant(variantList[next], token).then(ok => {
-                    if (token !== playToken) return;
-                    if (ok) { const p = audio.play(); if (p) p.catch(err => handlePlayBlocked(err)); }
-                    else failoverToNextVariant();
-                });
-            } else {
-                tryNativeFallback(currentIndex, playToken);
-            }
-        }
+// Construir tarjetas
+stations.forEach((station, index) => {
+  const card = document.createElement('div');
+  card.className = 'station-card';
+  card.innerHTML = `
+    <div class="card-top"><span><b>NODO ${String(index+1).padStart(2,'0')}</b></span><span>${freqOf(station.name)} FM</span><span class="card-dot"></span></div>
+    <div class="logo-container"><img src="${station.logo}" alt="${station.name}" class="station-logo" loading="lazy" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'"></div>
+    <div class="station-info"><div class="station-name">${station.name}</div><div class="status">Listo</div></div>
+    <div class="custom-player"><button class="play-btn" title="Reproducir">${playIcon}</button><div class="cyber-equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div><div class="vol-btn-group"><button class="vol-mute-btn" title="Silenciar">${iconVolHigh}</button></div></div>`;
+  gridContainer.appendChild(card);
+  const playBtn = card.querySelector('.play-btn');
+  const status = card.querySelector('.status');
+  const muteBtn = card.querySelector('.vol-mute-btn');
+  activeCards.push(card); playBtns.push(playBtn); statusSpans.push(status); muteBtns.push(muteBtn);
+  playBtn.addEventListener('click', () => handlePlayTrigger(index));
+  muteBtn.addEventListener('click', toggleMute);
+  card.querySelector('.logo-container').addEventListener('click', () => handlePlayTrigger(index));
+});
 
-        async function tryNativeFallback(index, token) {
-            if (token !== playToken || index !== currentIndex) return;
-            if (!nativeHlsSupported()) {
-                isConnecting = false;
-                setStatus(index, 'Error al conectar • Toca de nuevo');
-                syncUI(); stopWatchdog();
-                return;
-            }
-            setStatus(index, 'Probando reproductor nativo…');
-            destroyHls();
-            audio.src = stations[index].url;
-            try { audio.load(); } catch(e){}
-            try { await audio.play(); } catch(err) { handlePlayBlocked(err); }
-        }
+// --- HLS con Content Steering ---
+function parseMaster(text, masterUrl){
+  const lines = text.split(/\r?\n/); const variants = []; let steeringUri = null, defaultPathway = null;
+  for (let i=0;i<lines.length;i++){
+    const line = lines[i].trim();
+    if (line.startsWith('#EXT-X-CONTENT-STEERING:')){ const mUri = line.match(/SERVER-URI="([^"]+)"/); const mPath = line.match(/PATHWAY-ID="([^"]+)"/); if(mUri) steeringUri=mUri[1]; if(mPath) defaultPathway=mPath[1]; }
+    if (line.startsWith('#EXT-X-STREAM-INF:')){
+      const mPath = line.match(/PATHWAY-ID="([^"]+)"/);
+      for (let j=i+1;j<lines.length;j++){ const u = lines[j].trim(); if(!u) continue; if(u.startsWith('#')) break; try{ variants.push({url:new URL(u,masterUrl).href, pathway:mPath?mPath[1]:''}); }catch(e){ variants.push({url:u, pathway:mPath?mPath[1]:''}); } break; }
+    }
+  }
+  return { variants, steeringUri, defaultPathway };
+}
+async function fetchWithTimeout(url, ms=6000){ const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),ms); try{ return await fetch(url,{signal:ctrl.signal,cache:'no-store'}); } finally{ clearTimeout(t); } }
+async function getOrderedVariants(masterUrl){
+  try{
+    const res = await fetchWithTimeout(masterUrl,6000); if(!res.ok) throw new Error('master HTTP '+res.status);
+    const text = await res.text(); if(!text.includes('#EXT-X-STREAM-INF')) return [masterUrl];
+    const {variants, steeringUri, defaultPathway} = parseMaster(text, masterUrl); if(!variants.length) return [masterUrl];
+    let priority = [];
+    if(steeringUri){ try{ const sUrl=new URL(steeringUri,masterUrl); if(defaultPathway) sUrl.searchParams.set('_HLS_pathway',defaultPathway); const sRes=await fetchWithTimeout(sUrl.href,5000); if(sRes.ok){ const sj=await sRes.json(); priority=sj['PATHWAY-PRIORITY']||sj.pathwayPriority||[]; } }catch(e){} }
+    if(!priority.length && defaultPathway) priority=[defaultPathway];
+    const ordered=[...variants].sort((a,b)=>{ const ia=priority.indexOf(a.pathway), ib=priority.indexOf(b.pathway); return (ia===-1?99:ia)-(ib===-1?99:ib); });
+    return ordered.map(v=>v.url);
+  }catch(e){ return [masterUrl]; }
+}
+function ensureHls(){
+  if(hls || !hlsSupported()) return hls;
+  hls = new Hls({ enableWorker:true, lowLatencyMode:false, liveSyncDurationCount:3, maxBufferLength:30, maxMaxBufferLength:60, manifestLoadingMaxRetry:2, levelLoadingMaxRetry:3, fragLoadingMaxRetry:3, manifestLoadingRetryDelay:1000, levelLoadingRetryDelay:1000, fragLoadingRetryDelay:1000 });
+  hls.attachMedia(audio);
+  hls.on(Hls.Events.MANIFEST_PARSED, () => { if(hls._token!==playToken) return; hasLoadedSource=true; if(currentIndex>=0 && audio.paused){ const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); } });
+  hls.on(Hls.Events.ERROR, (event,data)=>{
+    if(hls._token!==playToken) return; if(!data.fatal) return; if(isLoadingVariant) return;
+    if(data.type===Hls.ErrorTypes.MEDIA_ERROR){ try{ hls.recoverMediaError(); return; }catch(e){} }
+    if(wasPlaying){
+      const now=Date.now(); consecutiveFatal=(now-lastFatalAt<15000)?consecutiveFatal+1:1; lastFatalAt=now;
+      if(consecutiveFatal<3){ setStatus(currentIndex,'Reconectando…'); try{ hls.startLoad(); }catch(e){} return; }
+      consecutiveFatal=0;
+    }
+    failoverToNextVariant();
+  });
+  return hls;
+}
+function destroyHls(){ if(hls){ try{ hls.destroy(); }catch(e){} hls=null; } }
+function loadOneVariant(url, token){
+  return new Promise((resolve)=>{
+    isLoadingVariant=true; destroyHls(); ensureHls(); if(!hls){ isLoadingVariant=false; resolve(false); return; }
+    hls._token=token; let settled=false;
+    const timer=setTimeout(()=>{ if(!settled){ settled=true; cleanup(); resolve(false); } },9000);
+    const onParsed=()=>{ if(settled) return; settled=true; cleanup(); resolve(true); };
+    const onError=(e,data)=>{ if(!data.fatal||settled) return; settled=true; cleanup(); resolve(false); };
+    const cleanup=()=>{ clearTimeout(timer); isLoadingVariant=false; try{ hls.off(Hls.Events.MANIFEST_PARSED,onParsed); }catch(e){} try{ hls.off(Hls.Events.ERROR,onError); }catch(e){} };
+    hls.on(Hls.Events.MANIFEST_PARSED,onParsed); hls.on(Hls.Events.ERROR,onError); hls.loadSource(url);
+  });
+}
+function failoverToNextVariant(){
+  if(playToken===0||currentIndex<0) return; if(failoverToNextVariant._busy) return;
+  failoverToNextVariant._busy=true; setTimeout(()=>{ failoverToNextVariant._busy=false; },800);
+  const next=variantIndex+1;
+  if(next<variantList.length){
+    variantIndex=next; setStatus(currentIndex,`Probando otra senal… (${next+1}/${variantList.length})`);
+    const token=playToken;
+    if(wasPlaying && hls){ try{ hls._token=token; hls.stopLoad(); hls.loadSource(variantList[next]); return; }catch(e){} }
+    loadOneVariant(variantList[next],token).then(ok=>{ if(token!==playToken) return; if(ok){ const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); } else failoverToNextVariant(); });
+  } else { tryNativeFallback(currentIndex,playToken); }
+}
+async function tryNativeFallback(index, token){
+  if(token!==playToken||index!==currentIndex) return;
+  if(!nativeHlsSupported()){ isConnecting=false; setStatus(index,'Error al conectar • Toca de nuevo'); syncUI(); stopWatchdog(); return; }
+  setStatus(index,'Probando reproductor nativo…'); destroyHls(); audio.src=stations[index].url; try{ audio.load(); }catch(e){} try{ await audio.play(); }catch(err){ handlePlayBlocked(err); }
+}
+function handlePlayBlocked(err){
+  if(!err) return;
+  if(err.name==='NotAllowedError'){ isConnecting=false; hasLoadedSource=true; setStatus(currentIndex,'Toca ▶ de nuevo'); floatingStatus.textContent='Toca ▶ de nuevo'; syncUI(); }
+}
+function armConnectTimeout(index, token){ clearTimeout(connectTimeout); connectTimeout=setTimeout(()=>{ if(token===playToken&&index===currentIndex&&isConnecting) failoverToNextVariant(); },12000); }
+function startWatchdog(){
+  stopWatchdog(); lastTime=-1; stallCount=0;
+  stallTimer=setInterval(()=>{
+    if(currentIndex<0) return;
+    if(audio.paused||audio.ended||audio.seeking){ lastTime=audio.currentTime; stallCount=0; return; }
+    if(audio.readyState===0) return;
+    if(audio.currentTime===lastTime){ stallCount++; if(stallCount===1){ if(hls){ try{ hls.startLoad(); }catch(e){} } } else if(stallCount===2){ if(hls){ try{ hls.recoverMediaError(); }catch(e){} } } else if(stallCount>=3){ stallCount=0; failoverToNextVariant(); } }
+    else stallCount=0;
+    lastTime=audio.currentTime;
+  },5000);
+}
+function stopWatchdog(){ if(stallTimer){ clearInterval(stallTimer); stallTimer=null; } }
 
-        function handlePlayBlocked(err) {
-            if (!err) return;
-            if (err.name === 'NotAllowedError') {
-                // Play bloqueado por autoplay: el manifest YA cargó, solo falta otro gesto.
-                // NO marcar como error, dejar hasLoadedSource=true para que el próximo click RESUMA.
-                isConnecting = false;
-                hasLoadedSource = true;
-                setStatus(currentIndex, 'Toca ▶ de nuevo');
-                floatingStatus.textContent = 'Toca ▶ de nuevo';
-                syncUI();
-            }
-        }
+function handlePlayTrigger(index){
+  if(currentIndex===index){
+    const reallyPlaying=!audio.paused && !audio.ended;
+    if(reallyPlaying){ stopStation(); return; }
+    if(hasLoadedSource){ userRequestedStop=false; const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); return; }
+    if(isConnecting){ stopStation(); return; }
+    playStation(index); return;
+  }
+  playStation(index);
+}
+async function playStation(index){
+  const myToken=++playToken;
+  clearTimeout(retryTimer); clearTimeout(connectTimeout); clearTimeout(resumeTimer);
+  if(hls) hls.stopLoad(); audio.pause();
+  currentIndex=index; isConnecting=true; hasLoadedSource=false; userRequestedStop=false; wasPlaying=false; consecutiveFatal=0;
+  variantList=[]; variantIndex=0; lastTime=-1; stallCount=0;
+  setStatus(index,'Conectando…'); floatingStatus.textContent='Conectando…'; syncUI(); updateMediaSession(index);
+  try{ const p0=audio.play(); if(p0) p0.catch(()=>{}); }catch(e){}
+  variantList=await getOrderedVariants(stations[index].url);
+  if(myToken!==playToken) return;
+  if(hlsSupported()){
+    for(variantIndex=0;variantIndex<variantList.length;variantIndex++){
+      if(myToken!==playToken) return;
+      setStatus(index, variantList.length>1 ? `Conectando… (${variantIndex+1}/${variantList.length})` : 'Conectando…');
+      const ok=await loadOneVariant(variantList[variantIndex],myToken);
+      if(myToken!==playToken) return; if(!ok) continue;
+      hasLoadedSource=true; const p=audio.play();
+      if(p){ try{ await p; isConnecting=false; }catch(err){ handlePlayBlocked(err); return; } }
+      armConnectTimeout(index,myToken); startWatchdog(); return;
+    }
+    await tryNativeFallback(index,myToken); armConnectTimeout(index,myToken); startWatchdog(); return;
+  }
+  if(nativeHlsSupported()){ audio.src=stations[index].url; audio.load(); const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); armConnectTimeout(index,myToken); startWatchdog(); return; }
+  setStatus(index,'Navegador no compatible'); isConnecting=false;
+}
+function stopStation(){
+  playToken++; clearTimeout(retryTimer); clearTimeout(connectTimeout); clearTimeout(resumeTimer); stopWatchdog();
+  isConnecting=false; hasLoadedSource=false; userRequestedStop=true; wasPlaying=false;
+  if(hls) hls.stopLoad(); audio.pause();
+  if(!hlsSupported() && nativeHlsSupported()){ audio.removeAttribute('src'); audio.load(); }
+  if(currentIndex>=0) setStatus(currentIndex,'Pausado');
+  currentIndex=-1; variantList=[]; variantIndex=0; syncUI();
+}
+function playNext(){ const n = currentIndex>=0 ? (currentIndex+1)%stations.length : 0; playStation(n); }
+function playPrev(){ const p = currentIndex>0 ? currentIndex-1 : stations.length-1; playStation(p); }
 
-        function armConnectTimeout(index, token) {
-            clearTimeout(connectTimeout);
-            connectTimeout = setTimeout(() => {
-                if (token === playToken && index === currentIndex && isConnecting) failoverToNextVariant();
-            }, 12000);
-        }
+audio.addEventListener('playing', ()=>{
+  if(currentIndex<0) return; isConnecting=false; hasLoadedSource=true; wasPlaying=true; consecutiveFatal=0;
+  clearTimeout(resumeTimer); clearTimeout(connectTimeout);
+  setStatus(currentIndex,'En vivo'); floatingStatus.textContent='En vivo'; syncUI(); updateMediaSession(currentIndex);
+});
+audio.addEventListener('timeupdate', ()=>{ if(wasPlaying) consecutiveFatal=0; });
+audio.addEventListener('waiting', ()=>{ if(currentIndex<0||audio.paused) return; if(statusSpans[currentIndex].textContent==='En vivo') setStatus(currentIndex,'Cargando…'); });
+audio.addEventListener('pause', ()=>{
+  if(currentIndex<0) return;
+  if(userRequestedStop){ syncUI(); return; }
+  if(!wasPlaying && isConnecting) return;
+  if(wasPlaying && hasLoadedSource && !audio.ended){
+    setStatus(currentIndex,'Reconectando…'); syncUI(); clearTimeout(resumeTimer);
+    resumeTimer=setTimeout(()=>{ if(currentIndex<0||userRequestedStop) return; const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); },600);
+    return;
+  }
+  if(!isConnecting) syncUI();
+});
+audio.addEventListener('canplay', ()=>{ if(currentIndex>=0 && isConnecting) hasLoadedSource=true; });
+audio.addEventListener('error', ()=>{ if(currentIndex<0) return; if(!hlsSupported()) failoverToNextVariant(); });
 
-        function startWatchdog() {
-            stopWatchdog();
-            lastTime = -1; stallCount = 0;
-            stallTimer = setInterval(() => {
-                if (currentIndex < 0) return;
-                // Si está pausado, buscando, o sin datos, NO es un stall: es buffering / pausa real
-                if (audio.paused || audio.ended || audio.seeking) { lastTime = audio.currentTime; stallCount = 0; return; }
-                if (audio.readyState === 0) return;
-                if (audio.currentTime === lastTime) {
-                    stallCount++;
-                    // 1er aviso (5s): solo reanudar carga, sin cambiar de variante
-                    if (stallCount === 1) { if (hls) { try { hls.startLoad(); } catch(e){} } }
-                    // 2do aviso (10s): intentar recuperar media
-                    else if (stallCount === 2) { if (hls) { try { hls.recoverMediaError(); } catch(e){} } }
-                    // 3er aviso (15s): ahora sí, cambiar de variante
-                    else if (stallCount >= 3) { stallCount = 0; failoverToNextVariant(); }
-                } else stallCount = 0;
-                lastTime = audio.currentTime;
-            }, 5000);
-        }
-        function stopWatchdog() { if (stallTimer) { clearInterval(stallTimer); stallTimer = null; } }
-
-        // ============ FIX 2: PLAY / STOP SIN TRAMPA ============
-        function handlePlayTrigger(index) {
-            if (currentIndex === index) {
-                const reallyPlaying = !audio.paused && !audio.ended;
-                if (reallyPlaying) { stopStation(); return; }
-                // Está pausado pero YA cargó (ej. play bloqueado por autoplay):
-                // el click debe RESUMIR, no parar.
-                if (hasLoadedSource) {
-                    const p = audio.play();
-                    if (p) p.catch(err => handlePlayBlocked(err));
-                    return;
-                }
-                // Está conectando y aún no cargó nada: segundo click = cancelar
-                if (isConnecting) { stopStation(); return; }
-                // Pausado sin fuente: reproducir de nuevo
-                playStation(index);
-                return;
-            }
-            playStation(index);
-        }
-
-        async function playStation(index) {
-            const myToken = ++playToken;
-            clearTimeout(retryTimer); clearTimeout(connectTimeout);
-            if (hls) hls.stopLoad();
-            audio.pause();
-            currentIndex = index;
-            isConnecting = true;
-            hasLoadedSource = false;
-            userRequestedStop = false;
-            wasPlaying = false;
-            consecutiveFatal = 0;
-            clearTimeout(resumeTimer);
-            variantList = []; variantIndex = 0;
-            lastTime = -1; stallCount = 0;
-            setStatus(index, 'Conectando…');
-            floatingStatus.textContent = 'Conectando…';
-            syncUI(); updateMediaSession(index);
-            // Llamar play() ANTES del primer await: sigue dentro del gesto del click.
-            // Si aún no hay fuente fallará, pero desbloquea el elemento en algunos navegadores.
-            try { const p0 = audio.play(); if (p0) p0.catch(() => {}); } catch(e){}
-
-            // Resolver variantes (steering) antes de cargar
-            variantList = await getOrderedVariants(stations[index].url);
-            if (myToken !== playToken) return;
-
-            if (hlsSupported()) {
-                for (variantIndex = 0; variantIndex < variantList.length; variantIndex++) {
-                    if (myToken !== playToken) return;
-                    setStatus(index, variantList.length > 1 ? `Conectando… (${variantIndex + 1}/${variantList.length})` : 'Conectando…');
-                    const ok = await loadOneVariant(variantList[variantIndex], myToken);
-                    if (myToken !== playToken) return;
-                    if (!ok) continue; // probar siguiente pathway
-                    hasLoadedSource = true;
-                    const p = audio.play();
-                    if (p) {
-                        try { await p; isConnecting = false; }
-                        catch (err) { handlePlayBlocked(err); return; }
-                    }
-                    armConnectTimeout(index, myToken);
-                    startWatchdog();
-                    return; // éxito, no probar más variantes
-                }
-                // Todas las variantes Hls.js fallaron -> nativo
-                await tryNativeFallback(index, myToken);
-                armConnectTimeout(index, myToken);
-                startWatchdog();
-                return;
-            }
-            if (nativeHlsSupported()) {
-                audio.src = stations[index].url;
-                audio.load();
-                const p = audio.play();
-                if (p) p.catch(err => handlePlayBlocked(err));
-                armConnectTimeout(index, myToken);
-                startWatchdog();
-                return;
-            }
-            setStatus(index, 'Navegador no compatible');
-            isConnecting = false;
-        }
-
-        function stopStation() {
-            playToken++;
-            clearTimeout(retryTimer); clearTimeout(connectTimeout); clearTimeout(resumeTimer); stopWatchdog();
-            isConnecting = false; hasLoadedSource = false;
-            userRequestedStop = true;
-            wasPlaying = false;
-            if (hls) hls.stopLoad();
-            audio.pause();
-            if (!hlsSupported() && nativeHlsSupported()) { audio.removeAttribute('src'); audio.load(); }
-            if (currentIndex >= 0) setStatus(currentIndex, 'Pausado');
-            currentIndex = -1; variantList = []; variantIndex = 0;
-            syncUI();
-        }
-
-        audio.addEventListener('playing', () => {
-            if (currentIndex < 0) return;
-            isConnecting = false; hasLoadedSource = true;
-            wasPlaying = true;
-            consecutiveFatal = 0;
-            clearTimeout(resumeTimer); clearTimeout(connectTimeout);
-            setStatus(currentIndex, 'En vivo'); floatingStatus.textContent = 'En vivo';
-            syncUI(); updateMediaSession(currentIndex);
-        });
-        audio.addEventListener('timeupdate', () => { if (wasPlaying) consecutiveFatal = 0; });
-        audio.addEventListener('waiting', () => {
-            if (currentIndex < 0 || audio.paused) return;
-            if (statusSpans[currentIndex].textContent === 'En vivo') setStatus(currentIndex, 'Cargando…');
-        });
-        audio.addEventListener('pause', () => {
-            if (currentIndex < 0) return;
-            // Pausa que pidió el usuario (botón / MediaSession stop): respetar, mostrar Pausado
-            if (userRequestedStop) { syncUI(); return; }
-            // Si nunca sonó, es la pausa inicial de playStation(): ignorar
-            if (!wasPlaying && isConnecting) return;
-            // Si ya estaba sonando y se pausó SOLO (error de Hls, destroy, interrupción del sistema,
-            // MediaSession pause del SO): NO quedarse en Pausado, intentar reanudar solo.
-            // Esto es lo que veías como "empieza y luego se pone en Pausado".
-            if (wasPlaying && hasLoadedSource && !audio.ended) {
-                console.debug('[Audio] pausa espontánea, reanudando... readyState=', audio.readyState, 'error=', audio.error);
-                setStatus(currentIndex, 'Reconectando…');
-                syncUI();
-                clearTimeout(resumeTimer);
-                resumeTimer = setTimeout(() => {
-                    if (currentIndex < 0 || userRequestedStop) return;
-                    const p = audio.play();
-                    if (p) p.catch(err => handlePlayBlocked(err));
-                }, 600);
-                return;
-            }
-            if (!isConnecting) syncUI();
-        });
-        audio.addEventListener('canplay', () => {
-            // Si ya cargó pero play() fue bloqueado, no forzar; el usuario toca ▶ de nuevo.
-            // Este evento solo confirma que hay fuente.
-            if (currentIndex >= 0 && isConnecting) hasLoadedSource = true;
-        });
-        audio.addEventListener('error', () => {
-            if (currentIndex < 0) return;
-            if (!hlsSupported()) failoverToNextVariant();
-        });
-
-        function toggleMute() {
-            isMuted = !isMuted;
-            audio.muted = isMuted;
-            audio.volume = isMuted ? 0 : 1;
-            muteBtns.forEach(btn => { btn.classList.toggle('muted', isMuted); btn.innerHTML = isMuted ? iconMute : iconVolHigh; });
-        }
-        function setStatus(index, text) { if (index >= 0 && statusSpans[index]) statusSpans[index].textContent = text; }
-        function syncUI() {
-            activeCards.forEach((card, idx) => {
-                const isCurrent = idx === currentIndex;
-                const isPlaying = isCurrent && !audio.paused && !audio.ended;
-                const isConn = isCurrent && isConnecting && audio.paused;
-                card.classList.toggle('playing', isPlaying);
-                card.classList.toggle('connecting', isConn);
-                playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
-                // Antes: cualquier 'pause' (incluso por buffering) convertía "En vivo" en "Pausado".
-                // Ahora: solo poner "Pausado" si el usuario lo pidió de verdad.
-                if (!isPlaying && !isConn && isCurrent && userRequestedStop && statusSpans[idx].textContent === 'En vivo') statusSpans[idx].textContent = 'Pausado';
-            });
-            if (currentIndex >= 0) {
-                const isPlaying = !audio.paused && !audio.ended;
-                floatingLogo.src = stations[currentIndex].logo;
-                floatingTitle.textContent = stations[currentIndex].name;
-                floatingStatus.textContent = isPlaying ? 'En vivo' : (isConnecting ? 'Conectando…' : (statusSpans[currentIndex] ? statusSpans[currentIndex].textContent : 'Pausado'));
-                floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
-                floatingPlayer.classList.add('active');
-            } else floatingPlayer.classList.remove('active');
-        }
-        function updateMediaSession(index) {
-            if (!('mediaSession' in navigator)) return;
-            const station = stations[index];
-            navigator.mediaSession.metadata = new MediaMetadata({ title: station.name, artist: 'Radios Streaming - Guatemala', album: 'Radios GUATE', artwork: [{ src: station.logo, sizes: '96x96', type: 'image/png' }, { src: station.logo, sizes: '128x128', type: 'image/png' }, { src: station.logo, sizes: '192x192', type: 'image/png' }, { src: station.logo, sizes: '512x512', type: 'image/png' }] });
-            navigator.mediaSession.setActionHandler('play', () => {
-                if (currentIndex < 0) return;
-                // Si ya hay fuente, solo reanudar, no recargar desde cero
-                if (hasLoadedSource) { userRequestedStop = false; const p = audio.play(); if (p) p.catch(err => handlePlayBlocked(err)); }
-                else playStation(currentIndex);
-            });
-            // Pausa desde el centro de control / auriculares: pausar, pero NO destruir (stopStation).
-            // Así el usuario puede darle play de nuevo sin recargar el stream.
-            navigator.mediaSession.setActionHandler('pause', () => { userRequestedStop = true; audio.pause(); syncUI(); });
-            navigator.mediaSession.setActionHandler('stop', () => stopStation());
-            navigator.mediaSession.setActionHandler('nexttrack', () => { const next = currentIndex >= 0 ? (currentIndex + 1) % stations.length : 0; playStation(next); });
-            navigator.mediaSession.setActionHandler('previoustrack', () => { const prev = currentIndex > 0 ? currentIndex - 1 : stations.length - 1; playStation(prev); });
-        }
-        floatingPlayBtn.addEventListener('click', () => { if (currentIndex >= 0) handlePlayTrigger(currentIndex); });
-        document.getElementById('searchInput').addEventListener('input', e => { const query = e.target.value.toLowerCase().trim(); activeCards.forEach((card, idx) => { card.style.display = stations[idx].name.toLowerCase().includes(query) ? 'flex' : 'none'; }); });
-        document.getElementById('refreshBtn').addEventListener('click', () => { stopStation(); location.reload(); });
-        document.addEventListener('visibilitychange', () => { if (document.hidden && hls && currentIndex < 0) hls.stopLoad(); });
-    </script>
+function toggleMute(){
+  isMuted=!isMuted; audio.muted=isMuted; audio.volume=isMuted?0:1; npVol.textContent=isMuted?'0%':'100%';
+  muteBtns.forEach(btn=>{ btn.classList.toggle('muted',isMuted); btn.innerHTML=isMuted?iconMute:iconVolHigh; });
+}
+function setStatus(index,text){ if(index>=0 && statusSpans[index]) statusSpans[index].textContent=text; }
+function syncUI(){
+  activeCards.forEach((card,idx)=>{
+    const isCurrent=idx===currentIndex; const isPlaying=isCurrent && !audio.paused && !audio.ended; const isConn=isCurrent && isConnecting && audio.paused;
+    card.classList.toggle('playing',isPlaying); card.classList.toggle('connecting',isConn);
+    playBtns[idx].innerHTML=isPlaying?pauseIcon:playIcon;
+    if(!isPlaying && !isConn && isCurrent && userRequestedStop && statusSpans[idx].textContent==='En vivo') statusSpans[idx].textContent='Pausado';
+  });
+  const isPlayingGlobal = currentIndex>=0 && !audio.paused && !audio.ended;
+  npPanel.classList.toggle('playing', isPlayingGlobal);
+  if(currentIndex>=0){
+    const st = stations[currentIndex];
+    npLogo.src=st.logo; npLogo.style.display='block'; npEmpty.style.display='none';
+    npFreq.innerHTML = freqOf(st.name)+' <small>FM</small>';
+    npName.textContent=st.name;
+    const txt = statusSpans[currentIndex] ? statusSpans[currentIndex].textContent : 'Pausado';
+    npStatus.textContent = txt; npStatus.style.color = isPlayingGlobal ? 'var(--lime)' : (isConnecting ? 'var(--amber)' : 'var(--muted)');
+    npPlayBtn.innerHTML = isPlayingGlobal ? pauseIcon : playIcon;
+    npSignal.className='signal '+(isPlayingGlobal?'on':(isConnecting?'mid':''));
+    npSource.textContent = hlsSupported() ? 'HLS // CLOUD' : 'NATIVO // HLS';
+    floatingLogo.src=st.logo; floatingTitle.textContent=st.name;
+    floatingStatus.textContent = isPlayingGlobal ? 'En vivo' : (isConnecting ? 'Conectando…' : txt);
+    floatingPlayBtn.innerHTML = isPlayingGlobal ? pauseIcon : playIcon;
+    floatingPlayer.classList.add('active');
+  } else {
+    npLogo.style.display='none'; npEmpty.style.display='block'; npFreq.innerHTML='--.-- <small>FM</small>'; npName.textContent='Sin seleccion'; npStatus.textContent='EN ESPERA'; npStatus.style.color='var(--muted)'; npPlayBtn.innerHTML=playIcon; npSignal.className='signal'; floatingPlayer.classList.remove('active');
+  }
+}
+function updateMediaSession(index){
+  if(!('mediaSession' in navigator)) return;
+  const station=stations[index];
+  navigator.mediaSession.metadata=new MediaMetadata({ title:station.name, artist:'GUATE SIGNAL - Guatemala', album:'Radios GUATE', artwork:[{src:station.logo,sizes:'96x96',type:'image/png'},{src:station.logo,sizes:'128x128',type:'image/png'},{src:station.logo,sizes:'192x192',type:'image/png'},{src:station.logo,sizes:'512x512',type:'image/png'}] });
+  navigator.mediaSession.setActionHandler('play', ()=>{ if(currentIndex>=0){ if(hasLoadedSource){ userRequestedStop=false; const p=audio.play(); if(p) p.catch(err=>handlePlayBlocked(err)); } else playStation(currentIndex); } });
+  navigator.mediaSession.setActionHandler('pause', ()=>{ userRequestedStop=true; audio.pause(); syncUI(); });
+  navigator.mediaSession.setActionHandler('stop', ()=>stopStation());
+  navigator.mediaSession.setActionHandler('nexttrack', ()=>playNext());
+  navigator.mediaSession.setActionHandler('previoustrack', ()=>playPrev());
+}
+floatingPlayBtn.addEventListener('click', ()=>{ if(currentIndex>=0) handlePlayTrigger(currentIndex); });
+npPlayBtn.addEventListener('click', ()=>{ if(currentIndex>=0) handlePlayTrigger(currentIndex); else playStation(0); });
+npNextBtn.addEventListener('click', playNext);
+npPrevBtn.addEventListener('click', playPrev);
+document.getElementById('searchInput').addEventListener('input', e=>{ const q=e.target.value.toLowerCase().trim(); activeCards.forEach((card,idx)=>{ card.style.display=stations[idx].name.toLowerCase().includes(q)?'':'none'; }); });
+document.getElementById('refreshBtn').addEventListener('click', ()=>{ stopStation(); location.reload(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && hls && currentIndex<0) hls.stopLoad(); });
+syncUI();
+</script>
 </body>
 </html>
