@@ -30,6 +30,9 @@
             --accent-glow: rgba(56, 189, 248, 0.25);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --online-color: #10b981;
+            --offline-color: #f43f5e;
+            --checking-color: #f59e0b;
         }
 
         body {
@@ -56,29 +59,35 @@
 
         .controls-container {
             margin-bottom: 25px; display: flex; justify-content: center; align-items: center;
-            gap: 10px; width: 100%; max-width: 550px; margin-left: auto; margin-right: auto;
+            flex-wrap: wrap; gap: 10px; width: 100%; max-width: 680px; margin-left: auto; margin-right: auto;
         }
         .search-input {
-            flex: 1; background-color: var(--card-bg); border: 1px solid var(--card-border);
+            flex: 1; min-width: 200px; background-color: var(--card-bg); border: 1px solid var(--card-border);
             border-radius: 25px; padding: 12px 18px; color: var(--text-main);
             font-size: 0.95rem; outline: none; transition: border-color 0.2s;
         }
         .search-input:focus { border-color: var(--accent-color); }
-        .refresh-btn {
+
+        .action-btn {
             background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main);
-            border-radius: 25px; padding: 11px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            border-radius: 25px; padding: 11px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer;
             display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;
             white-space: nowrap; -webkit-tap-highlight-color: transparent;
         }
-        .refresh-btn:active { transform: scale(0.96); background-color: #17233d; }
-        .refresh-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        .action-btn:active { transform: scale(0.96); background-color: #17233d; }
+        .action-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        .action-btn.monitoring {
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #34d399;
+            background-color: rgba(16, 185, 129, 0.08);
+        }
 
         .grid-stations {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
         }
         .station-card {
             background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
-            padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+            padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px;
             transition: all 0.2s ease; position: relative; overflow: hidden;
         }
         .station-card::before {
@@ -92,10 +101,69 @@
         }
         .station-card.connecting { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,.25); }
 
+        /* Botón pequeño de estado en esquina superior derecha */
+        .monitor-pill {
+            position: relative;
+            z-index: 3;
+            align-self: flex-end;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            background: rgba(9, 13, 22, 0.85);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .monitor-pill:hover { border-color: rgba(148, 163, 184, 0.45); }
+        .monitor-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background-color: var(--text-muted);
+            flex-shrink: 0;
+        }
+        .monitor-pill.online {
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .monitor-pill.online .monitor-dot {
+            background-color: var(--online-color);
+            box-shadow: 0 0 8px var(--online-color);
+        }
+        .monitor-pill.offline {
+            color: #fb7185;
+            border-color: rgba(244, 63, 94, 0.45);
+            background: rgba(244, 63, 94, 0.12);
+        }
+        .monitor-pill.offline .monitor-dot {
+            background-color: var(--offline-color);
+            box-shadow: 0 0 8px var(--offline-color);
+        }
+        .monitor-pill.checking {
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.45);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .monitor-pill.checking .monitor-dot {
+            background-color: var(--checking-color);
+            animation: pulseDot 0.9s infinite alternate;
+        }
+        @keyframes pulseDot {
+            from { opacity: 0.35; transform: scale(0.85); }
+            to { opacity: 1; transform: scale(1.15); }
+        }
+
         .logo-container {
-            width: 100px; height: 75px; background: #090d16; border-radius: 12px;
+            width: 100px; height: 72px; background: #090d16; border-radius: 12px;
             display: flex; justify-content: center; align-items: center; padding: 6px;
-            border: 1px solid var(--card-border); position: relative; z-index: 2;
+            border: 1px solid var(--card-border); position: relative; z-index: 2; cursor: pointer;
         }
         .station-logo { max-width: 100%; max-height: 100%; object-fit: contain; }
         .station-info { text-align: center; width: 100%; position: relative; z-index: 2; }
@@ -106,6 +174,11 @@
         .status { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
         .station-card.playing .status { color: #34d399; }
         .station-card.connecting .status { color: #fbbf24; }
+
+        .last-change {
+            font-size: 0.68rem; color: var(--text-muted); margin-top: 3px;
+            min-height: 14px; opacity: 0.85;
+        }
 
         .custom-player {
             width: 100%; display: flex; align-items: center; justify-content: space-between;
@@ -208,7 +281,7 @@
         }
         @media (max-width: 480px) {
             .controls-container { flex-direction: column; }
-            .search-input, .refresh-btn { width: 100%; justify-content: center; }
+            .search-input, .action-btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -217,14 +290,18 @@
     <div class="container">
         <header>
             <h1>Radios Streaming - GUATEMALA</h1>
-            <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p>
+            <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión o revisa su estado en vivo.</p>
         </header>
 
         <div class="controls-container">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora...">
-            <button id="refreshBtn" class="refresh-btn" title="Reiniciar Página">
+            <button id="monitorToggleBtn" class="action-btn" title="Activar o pausar monitoreo automático">
+                <span id="monitorBtnDot" class="monitor-dot"></span>
+                <span id="monitorBtnLabel">Monitor: OFF</span>
+            </button>
+            <button id="refreshBtn" class="action-btn" title="Probar todas ahora">
                 <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Actualizar
+                Chequear
             </button>
         </div>
 
@@ -258,13 +335,6 @@
         </button>
     </div>
 
-    <!--
-      ============================================================
-      CORRECCIÓN CLAVE: UN SOLO REPRODUCTOR PARA TODAS LAS RADIOS
-      Antes: 12 <audio> + 12 Hls.js cargando a la vez.
-      Ahora: 1 <audio> + 1 Hls.js reutilizado.
-      ============================================================
-    -->
     <audio id="mainPlayer" preload="none" playsinline crossorigin="anonymous"></audio>
 
     <script>
@@ -283,11 +353,11 @@
             { name: "Flix Xela 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8", logo: "flix.png" }
         ];
 
-        // ============ ESTADO GLOBAL - UN SOLO REPRODUCTOR ============
+        // ============ ESTADO GLOBAL REPRODUCTOR ============
         const audio = document.getElementById('mainPlayer');
         let hls = null;
         let currentIndex = -1;
-        let playToken = 0;        // Invalida reintentos / play() viejos cuando cambias de radio
+        let playToken = 0;
         let isConnecting = false;
         let retryCount = 0;
         const MAX_RETRIES = 3;
@@ -298,11 +368,26 @@
         let stallCount = 0;
         let isMuted = false;
 
+        // ============ ESTADO MONITOREO ONLINE / OFFLINE ============
+        const MONITOR_INTERVAL_MS = 30000; // Cada 30 segundos
+        const CHECK_TIMEOUT_MS = 5000;     // 5 segundos por emisora
+        let monitorTimer = null;
+        let isMonitoring = false;
+
+        // Guarda el último estado conocido y la hora exacta del cambio
+        const monitorState = stations.map(() => ({
+            state: 'unknown', // 'unknown' | 'checking' | 'online' | 'offline'
+            lastChangeTime: null
+        }));
+
         const gridContainer = document.getElementById('stationsGrid');
         const activeCards = [];
         const playBtns = [];
         const statusSpans = [];
         const muteBtns = [];
+        const monitorPills = [];
+        const monitorPillLabels = [];
+        const lastChangeSpans = [];
 
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -318,7 +403,13 @@
         const hlsSupported = () => window.Hls && Hls.isSupported();
         const nativeHlsSupported = () => audio.canPlayType('application/vnd.apple.mpegurl');
 
-        // ============ PWA (sin cambios de lógica) ============
+        function formatNowTime() {
+            return new Date().toLocaleTimeString('es-GT', {
+                hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        // ============ PWA ============
         let deferredPrompt;
         const banner = document.getElementById('pwa-install-banner');
         const bannerText = document.getElementById('pwa-banner-text');
@@ -349,18 +440,23 @@
         });
         function cerrarBanner() { banner.style.display = 'none'; }
 
-        // ============ CONSTRUIR TARJETAS (SIN <audio> POR TARJETA) ============
+        // ============ CONSTRUIR TARJETAS ============
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
             card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
             card.innerHTML = `
+                <button class="monitor-pill" title="Clic para probar esta emisora ahora">
+                    <span class="monitor-dot"></span>
+                    <span class="pill-label">Sin probar</span>
+                </button>
                 <div class="logo-container">
                     <img src="${station.logo}" alt="${station.name}" class="station-logo" loading="lazy" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
                 </div>
                 <div class="station-info">
                     <div class="station-name">${station.name}</div>
                     <div class="status">Listo</div>
+                    <div class="last-change"></div>
                 </div>
                 <div class="custom-player">
                     <button class="play-btn" title="Reproducir">${playIcon}</button>
@@ -371,19 +467,143 @@
                 </div>`;
             gridContainer.appendChild(card);
 
+            const pill = card.querySelector('.monitor-pill');
+            const pillLabel = card.querySelector('.pill-label');
             const playBtn = card.querySelector('.play-btn');
             const status = card.querySelector('.status');
+            const lastChange = card.querySelector('.last-change');
             const muteBtn = card.querySelector('.vol-mute-btn');
 
             activeCards.push(card);
+            monitorPills.push(pill);
+            monitorPillLabels.push(pillLabel);
             playBtns.push(playBtn);
             statusSpans.push(status);
+            lastChangeSpans.push(lastChange);
             muteBtns.push(muteBtn);
 
+            pill.addEventListener('click', (e) => {
+                e.stopPropagation();
+                checkStationHealth(index);
+            });
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
             muteBtn.addEventListener('click', toggleMute);
-            // Tocar el logo / nombre también reproduce, es más cómodo en móvil
             card.querySelector('.logo-container').addEventListener('click', () => handlePlayTrigger(index));
+        });
+
+        // ============ LÓGICA DE MONITOREO ONLINE / OFFLINE ============
+        function updateMonitorPillUI(index, visualState) {
+            const pill = monitorPills[index];
+            const label = monitorPillLabels[index];
+            const info = monitorState[index];
+
+            pill.classList.remove('online', 'offline', 'checking');
+
+            if (visualState === 'checking') {
+                pill.classList.add('checking');
+                label.textContent = 'Probando...';
+                return;
+            }
+
+            if (info.state === 'online') {
+                pill.classList.add('online');
+                label.textContent = 'Online';
+            } else if (info.state === 'offline') {
+                pill.classList.add('offline');
+                label.textContent = 'Offline';
+            } else {
+                label.textContent = 'Sin probar';
+            }
+
+            if (info.lastChangeTime) {
+                const tag = info.state === 'online' ? 'Online desde' : 'Offline desde';
+                lastChangeSpans[index].textContent = `${tag} ${info.lastChangeTime}`;
+            }
+        }
+
+        async function checkStationHealth(index) {
+            const station = stations[index];
+            const info = monitorState[index];
+            updateMonitorPillUI(index, 'checking');
+
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+
+            let isUp = false;
+            try {
+                const res = await fetch(station.url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                if (res.ok) {
+                    const text = await res.text();
+                    // Verifica que parezca un playlist HLS válido
+                    isUp = text.includes('#EXTM3U') || text.trim().length > 0;
+                }
+            } catch (err) {
+                isUp = false;
+            } finally {
+                clearTimeout(timer);
+            }
+
+            const nextState = isUp ? 'online' : 'offline';
+            // Solo actualiza la hora cuando cambia de estado (o en la primera lectura)
+            if (info.state !== nextState || !info.lastChangeTime) {
+                info.state = nextState;
+                info.lastChangeTime = formatNowTime();
+            } else {
+                info.state = nextState;
+            }
+
+            updateMonitorPillUI(index, nextState);
+        }
+
+        async function checkAllStations() {
+            // Chequea en lotes de 4 para no saturar red ni CPU
+            const batchSize = 4;
+            for (let i = 0; i < stations.length; i += batchSize) {
+                const batch = [];
+                for (let j = i; j < Math.min(i + batchSize, stations.length); j++) {
+                    batch.push(checkStationHealth(j));
+                }
+                await Promise.all(batch);
+            }
+        }
+
+        function setMonitoringEnabled(enabled) {
+            const btn = document.getElementById('monitorToggleBtn');
+            const dot = document.getElementById('monitorBtnDot');
+            const label = document.getElementById('monitorBtnLabel');
+
+            isMonitoring = enabled;
+            if (monitorTimer) {
+                clearInterval(monitorTimer);
+                monitorTimer = null;
+            }
+
+            if (isMonitoring) {
+                btn.classList.add('monitoring');
+                dot.style.backgroundColor = 'var(--online-color)';
+                dot.style.boxShadow = '0 0 8px var(--online-color)';
+                label.textContent = 'Monitor: ON (30s)';
+                checkAllStations();
+                monitorTimer = setInterval(checkAllStations, MONITOR_INTERVAL_MS);
+            } else {
+                btn.classList.remove('monitoring');
+                dot.style.backgroundColor = 'var(--text-muted)';
+                dot.style.boxShadow = 'none';
+                label.textContent = 'Monitor: OFF';
+            }
+        }
+
+        document.getElementById('monitorToggleBtn').addEventListener('click', () => {
+            setMonitoringEnabled(!isMonitoring);
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            checkAllStations();
         });
 
         // ============ HLS: UNA SOLA INSTANCIA REUTILIZABLE ============
@@ -405,7 +625,6 @@
             hls.attachMedia(audio);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // Si el usuario ya cambió de radio, ignorar este manifest viejo
                 if (hls._token !== playToken) return;
                 if (currentIndex >= 0 && audio.paused) {
                     const p = audio.play();
@@ -414,12 +633,11 @@
             });
 
             hls.on(Hls.Events.ERROR, (event, data) => {
-                if (hls._token !== playToken) return; // Error de una radio vieja, ignorar
+                if (hls._token !== playToken) return;
                 if (!data.fatal) return;
                 console.debug('[HLS]', data.type, data.details);
 
                 if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                    // Primeros 2 intentos: solo reanudar carga, sin recargar manifest
                     if (retryCount < 2) {
                         retryCount++;
                         setStatus(currentIndex, `Reconectando… (${retryCount}/${MAX_RETRIES})`);
@@ -430,7 +648,6 @@
                 } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
                     try { hls.recoverMediaError(); } catch(e) { scheduleRetry(currentIndex, playToken); }
                 } else {
-                    // Error desconocido: destruir y recrear Hls limpio
                     recreateHlsAndRetry(currentIndex, playToken);
                 }
             });
@@ -453,9 +670,6 @@
             }
         }
 
-        // ============ REINTENTO CON BACKOFF, SIN ?t= ============
-        // ANTES: url + '?t=' + Date.now() rompía el manifest y la caché de CloudFront.
-        // AHORA: siempre la URL limpia. Hls.js ya maneja lo live.
         function scheduleRetry(index, token) {
             if (token !== playToken || index !== currentIndex) return;
             if (retryCount >= MAX_RETRIES) {
@@ -498,7 +712,6 @@
             }, 10000);
         }
 
-        // ============ WATCHDOG: SOLO PARA LA RADIO ACTUAL ============
         function startWatchdog() {
             stopWatchdog();
             lastTime = -1;
@@ -510,10 +723,8 @@
                 if (audio.currentTime === lastTime) {
                     stallCount++;
                     if (stallCount === 1) {
-                        // Primer aviso: intento suave, sin recargar manifest
                         if (hls) { try { hls.startLoad(); } catch(e){} }
                     } else if (stallCount >= 2) {
-                        // Dos ciclos seguidos sin avanzar (~10s) = stall real
                         stallCount = 0;
                         scheduleRetry(currentIndex, playToken);
                     }
@@ -527,9 +738,7 @@
             if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
         }
 
-        // ============ PLAY / STOP - EL CORAZÓN DEL ARREGLO ============
         function handlePlayTrigger(index) {
-            // Tocar la misma radio que suena (o que está conectando) = pausar
             if (currentIndex === index && (!audio.paused || isConnecting)) {
                 stopStation();
                 return;
@@ -538,17 +747,13 @@
         }
 
         function playStation(index) {
-            const myToken = ++playToken; // Invalida todo lo anterior: play(), reintentos, errores viejos
+            const myToken = ++playToken;
             clearTimeout(retryTimer);
             clearTimeout(connectTimeout);
 
-            // 1) Detener de verdad lo anterior ANTES de cargar lo nuevo
             if (hls) hls.stopLoad();
             audio.pause();
-            // NO hacemos audio.removeAttribute('src') + load() aquí cuando usamos Hls:
-            // eso disparaba 'error' y dejaba a Hls en estado inconsistente.
 
-            // 2) Nuevo estado
             currentIndex = index;
             isConnecting = true;
             retryCount = 0;
@@ -560,13 +765,11 @@
             syncUI();
             updateMediaSession(index);
 
-            // 3) Cargar SOLO esta radio, con URL limpia
             if (hlsSupported()) {
                 ensureHls();
                 hls._token = myToken;
                 hls.loadSource(stations[index].url);
             } else if (nativeHlsSupported()) {
-                // Safari iOS nativo
                 audio.src = stations[index].url;
                 audio.load();
             } else {
@@ -575,13 +778,9 @@
                 return;
             }
 
-            // 4) play() EN EL MISMO GESTO del clic. Esto es obligatorio en iOS.
-            // No esperar a MANIFEST_PARSED con await, si no iOS bloquea el audio.
             const p = audio.play();
             if (p) p.catch((err) => {
                 if (myToken !== playToken) return;
-                // Si aún no hay manifest, Hls lo reintentará en MANIFEST_PARSED.
-                // Solo si es bloqueo por autoplay mostramos aviso.
                 if (err && err.name === 'NotAllowedError') setStatus(index, 'Toca ▶ de nuevo');
             });
 
@@ -590,7 +789,7 @@
         }
 
         function stopStation() {
-            playToken++; // Mata reintentos y errores pendientes de la radio anterior
+            playToken++;
             clearTimeout(retryTimer);
             clearTimeout(connectTimeout);
             stopWatchdog();
@@ -598,7 +797,6 @@
 
             if (hls) hls.stopLoad();
             audio.pause();
-            // En nativo sí limpiamos src, en Hls no hace falta y evita errores fantasma
             if (!hlsSupported() && nativeHlsSupported()) {
                 audio.removeAttribute('src');
                 audio.load();
@@ -609,12 +807,17 @@
             syncUI();
         }
 
-        // ============ EVENTOS DEL ÚNICO <audio> ============
         audio.addEventListener('playing', () => {
             if (currentIndex < 0) return;
             isConnecting = false;
             clearTimeout(connectTimeout);
             retryCount = 0;
+            // Si está reproduciendo en vivo, también marca Online si no estaba marcado
+            if (monitorState[currentIndex].state !== 'online') {
+                monitorState[currentIndex].state = 'online';
+                monitorState[currentIndex].lastChangeTime = formatNowTime();
+                updateMonitorPillUI(currentIndex, 'online');
+            }
             setStatus(currentIndex, 'En vivo');
             floatingStatus.textContent = 'En vivo';
             syncUI();
@@ -623,117 +826,92 @@
 
         audio.addEventListener('waiting', () => {
             if (currentIndex < 0 || audio.paused) return;
-            // Buffering normal, no recargar de inmediato
             if (statusSpans[currentIndex].textContent === 'En vivo') {
                 setStatus(currentIndex, 'Cargando…');
             }
         });
 
-        audio.addEventListener('pause', () => {
-            // Pausa real (no la pausa interna al cambiar de radio, que ya hace syncUI)
-            if (currentIndex >= 0 && !isConnecting) syncUI();
-        });
-
-        audio.addEventListener('error', () => {
-            if (currentIndex < 0) return;
-            // Solo si Hls no lo está manejando ya. El watchdog / Hls ERROR lo cubre,
-            // pero en Safari nativo este es el único aviso.
-            if (!hlsSupported()) scheduleRetry(currentIndex, playToken);
-        });
-
-        // 'stalled' ya no recarga de golpe: el watchdog lo confirma con 2 ciclos.
-        // Antes cada 'stalled' de cualquiera de los 12 audios disparaba reconnect.
-
-        // ============ MUTE GLOBAL (sin WebAudio) ============
-        // ANTES: createMediaElementSource + GainNode. En iOS, si el AudioContext
-        // quedaba suspendido, el audio se iba a un contexto mudo aunque dijera "En vivo".
-        // AHORA: audio.muted nativo, sin desviar el audio por WebAudio.
-        function toggleMute() {
-            isMuted = !isMuted;
-            audio.muted = isMuted;
-            audio.volume = isMuted ? 0 : 1;
-            muteBtns.forEach(btn => {
-                btn.classList.toggle('muted', isMuted);
-                btn.innerHTML = isMuted ? iconMute : iconVolHigh;
-            });
-        }
-
-        // ============ UI ============
         function setStatus(index, text) {
-            if (index >= 0 && statusSpans[index]) statusSpans[index].textContent = text;
+            if (index < 0 || !statusSpans[index]) return;
+            statusSpans[index].textContent = text;
         }
 
         function syncUI() {
-            activeCards.forEach((card, idx) => {
-                const isCurrent = idx === currentIndex;
-                const isPlaying = isCurrent && !audio.paused && !audio.ended;
-                const isConn = isCurrent && isConnecting && audio.paused;
-                card.classList.toggle('playing', isPlaying);
-                card.classList.toggle('connecting', isConn);
-                playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
-                if (!isPlaying && !isConn && isCurrent && statusSpans[idx].textContent === 'En vivo') {
-                    statusSpans[idx].textContent = 'Pausado';
+            stations.forEach((st, i) => {
+                const isCurrent = (i === currentIndex);
+                const isPlaying = isCurrent && !audio.paused;
+                const isConn = isCurrent && isConnecting;
+
+                activeCards[i].classList.toggle('playing', isPlaying);
+                activeCards[i].classList.toggle('connecting', isConn && !isPlaying);
+                playBtns[i].innerHTML = (isPlaying || isConn) ? pauseIcon : playIcon;
+
+                if (!isCurrent && statusSpans[i].textContent !== 'Listo') {
+                    if (['En vivo', 'Conectando…', 'Cargando…', 'Pausado'].includes(statusSpans[i].textContent) ||
+                        statusSpans[i].textContent.startsWith('Reintentando') ||
+                        statusSpans[i].textContent.startsWith('Reconectando')) {
+                        statusSpans[i].textContent = 'Listo';
+                    }
                 }
             });
 
             if (currentIndex >= 0) {
-                const isPlaying = !audio.paused && !audio.ended;
-                floatingLogo.src = stations[currentIndex].logo;
-                floatingTitle.textContent = stations[currentIndex].name;
-                floatingStatus.textContent = isPlaying ? 'En vivo' : (isConnecting ? 'Conectando…' : 'Pausado');
-                floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
+                const st = stations[currentIndex];
                 floatingPlayer.classList.add('active');
+                floatingTitle.textContent = st.name;
+                floatingLogo.src = st.logo;
+                floatingLogo.alt = st.name;
+                const activeNow = !audio.paused || isConnecting;
+                floatingPlayBtn.innerHTML = activeNow ? pauseIcon : playIcon;
+                if (!audio.paused) floatingStatus.textContent = 'En vivo';
+                else if (isConnecting) floatingStatus.textContent = statusSpans[currentIndex].textContent;
+                else floatingStatus.textContent = 'Pausado';
             } else {
                 floatingPlayer.classList.remove('active');
             }
         }
 
-        function updateMediaSession(index) {
-            if (!('mediaSession' in navigator)) return;
-            const station = stations[index];
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: station.name,
-                artist: 'Radios Streaming - Guatemala',
-                album: 'Radios GUATE',
-                artwork: [
-                    { src: station.logo, sizes: '96x96', type: 'image/png' },
-                    { src: station.logo, sizes: '128x128', type: 'image/png' },
-                    { src: station.logo, sizes: '192x192', type: 'image/png' },
-                    { src: station.logo, sizes: '512x512', type: 'image/png' }
-                ]
-            });
-            navigator.mediaSession.setActionHandler('play', () => { if (currentIndex >= 0) playStation(currentIndex); });
-            navigator.mediaSession.setActionHandler('pause', () => stopStation());
-            navigator.mediaSession.setActionHandler('stop', () => stopStation());
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-                const next = currentIndex >= 0 ? (currentIndex + 1) % stations.length : 0;
-                playStation(next);
-            });
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-                const prev = currentIndex > 0 ? currentIndex - 1 : stations.length - 1;
-                playStation(prev);
+        floatingPlayBtn.addEventListener('click', () => {
+            if (currentIndex < 0) return;
+            handlePlayTrigger(currentIndex);
+        });
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            audio.muted = isMuted;
+            muteBtns.forEach(btn => {
+                btn.innerHTML = isMuted ? iconMute : iconVolHigh;
+                btn.classList.toggle('muted', isMuted);
             });
         }
 
-        floatingPlayBtn.addEventListener('click', () => {
-            if (currentIndex >= 0) handlePlayTrigger(currentIndex);
-        });
+        function updateMediaSession(index) {
+            if (!('mediaSession' in navigator)) return;
+            const st = stations[index];
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: st.name,
+                artist: 'Radios Streaming - Guatemala',
+                album: 'En Vivo',
+                artwork: [
+                    { src: st.logo, sizes: '512x512', type: 'image/png' }
+                ]
+            });
+            navigator.mediaSession.setActionHandler('play', () => playStation(index));
+            navigator.mediaSession.setActionHandler('pause', () => stopStation());
+            navigator.mediaSession.setActionHandler('stop', () => stopStation());
+        }
 
-        document.getElementById('searchInput').addEventListener('input', e => {
-            const query = e.target.value.toLowerCase().trim();
-            activeCards.forEach((card, idx) => {
-                card.style.display = stations[idx].name.toLowerCase().includes(query) ? 'flex' : 'none';
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            stations.forEach((st, i) => {
+                activeCards[i].style.display = st.name.toLowerCase().includes(q) ? '' : 'none';
             });
         });
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            stopStation();
-            location.reload();
-        });
-
-        // Si el usuario cierra / cambia de pestaña, no dejar Hls descargando en fondo
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden && hls && currentIndex < 0) hls.stopLoad();
+            if (document.visibilityState === 'visible' && currentIndex >= 0 && !audio.paused && hls) {
+                try { hls.startLoad(); } catch(e){}
+            }
         });
     </script>
 </body>
