@@ -59,7 +59,7 @@
 
         .controls-container {
             margin-bottom: 25px; display: flex; justify-content: center; align-items: center;
-            flex-wrap: wrap; gap: 10px; width: 100%; max-width: 680px; margin-left: auto; margin-right: auto;
+            flex-wrap: wrap; gap: 10px; width: 100%; max-width: 720px; margin-left: auto; margin-right: auto;
         }
         .search-input {
             flex: 1; min-width: 200px; background-color: var(--card-bg); border: 1px solid var(--card-border);
@@ -81,6 +81,10 @@
             color: #34d399;
             background-color: rgba(16, 185, 129, 0.08);
         }
+        .action-btn.force-btn {
+            border-color: rgba(56, 189, 248, 0.45);
+            color: #7dd3fc;
+        }
 
         .grid-stations {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
@@ -101,7 +105,6 @@
         }
         .station-card.connecting { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,.25); }
 
-        /* Botón pequeño de estado en esquina superior derecha */
         .monitor-pill {
             position: relative;
             z-index: 3;
@@ -109,7 +112,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 9px;
+            padding: 4px 10px;
             border-radius: 999px;
             font-size: 0.68rem;
             font-weight: 700;
@@ -122,7 +125,7 @@
             transition: all 0.2s ease;
             -webkit-tap-highlight-color: transparent;
         }
-        .monitor-pill:hover { border-color: rgba(148, 163, 184, 0.45); }
+        .monitor-pill:hover { border-color: rgba(56, 189, 248, 0.55); }
         .monitor-dot {
             width: 7px; height: 7px; border-radius: 50%;
             background-color: var(--text-muted);
@@ -290,7 +293,7 @@
     <div class="container">
         <header>
             <h1>Radios Streaming - GUATEMALA</h1>
-            <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión o revisa su estado en vivo.</p>
+            <p class="subtitle">Reproducción independiente y monitoreo forzado de estado en tiempo real.</p>
         </header>
 
         <div class="controls-container">
@@ -299,9 +302,9 @@
                 <span id="monitorBtnDot" class="monitor-dot"></span>
                 <span id="monitorBtnLabel">Monitor: OFF</span>
             </button>
-            <button id="refreshBtn" class="action-btn" title="Probar todas ahora">
-                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Chequear
+            <button id="forceAllBtn" class="action-btn force-btn" title="Forzar prueba real de todas las emisoras sin reproducir audio">
+                <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                Forzar Chequeo
             </button>
         </div>
 
@@ -335,6 +338,7 @@
         </button>
     </div>
 
+    <!-- Reproductor principal de escucha -->
     <audio id="mainPlayer" preload="none" playsinline crossorigin="anonymous"></audio>
 
     <script>
@@ -353,7 +357,7 @@
             { name: "Flix Xela 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8", logo: "flix.png" }
         ];
 
-        // ============ ESTADO GLOBAL REPRODUCTOR ============
+        // ============ 1. MÓDULO DE REPRODUCCIÓN (AISLADO) ============
         const audio = document.getElementById('mainPlayer');
         let hls = null;
         let currentIndex = -1;
@@ -368,16 +372,18 @@
         let stallCount = 0;
         let isMuted = false;
 
-        // ============ ESTADO MONITOREO ONLINE / OFFLINE ============
-        const MONITOR_INTERVAL_MS = 30000; // Cada 30 segundos
-        const CHECK_TIMEOUT_MS = 5000;     // 5 segundos por emisora
+        // ============ 2. MÓDULO DE MONITOREO FORZADO (SEPARADO) ============
+        const MONITOR_INTERVAL_MS = 30000;
+        const FETCH_TIMEOUT_MS = 3500;
+        const PROBE_TIMEOUT_MS = 7000;
         let monitorTimer = null;
         let isMonitoring = false;
+        let isForcingAll = false;
 
-        // Guarda el último estado conocido y la hora exacta del cambio
         const monitorState = stations.map(() => ({
             state: 'unknown', // 'unknown' | 'checking' | 'online' | 'offline'
-            lastChangeTime: null
+            lastChangeTime: null,
+            method: '' // 'fetch' | 'hls' | 'live'
         }));
 
         const gridContainer = document.getElementById('stationsGrid');
@@ -446,7 +452,7 @@
             card.className = 'station-card';
             card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
             card.innerHTML = `
-                <button class="monitor-pill" title="Clic para probar esta emisora ahora">
+                <button class="monitor-pill" title="Forzar prueba de estado de esta emisora">
                     <span class="monitor-dot"></span>
                     <span class="pill-label">Sin probar</span>
                 </button>
@@ -482,16 +488,17 @@
             lastChangeSpans.push(lastChange);
             muteBtns.push(muteBtn);
 
+            // Clic en el botón pequeño fuerza el chequeo de esa emisora sin reproducir
             pill.addEventListener('click', (e) => {
                 e.stopPropagation();
-                checkStationHealth(index);
+                forceCheckStation(index);
             });
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
             muteBtn.addEventListener('click', toggleMute);
             card.querySelector('.logo-container').addEventListener('click', () => handlePlayTrigger(index));
         });
 
-        // ============ LÓGICA DE MONITOREO ONLINE / OFFLINE ============
+        // ============ FUNCIONES DE MONITOREO FORZADO ============
         function updateMonitorPillUI(index, visualState) {
             const pill = monitorPills[index];
             const label = monitorPillLabels[index];
@@ -501,7 +508,7 @@
 
             if (visualState === 'checking') {
                 pill.classList.add('checking');
-                label.textContent = 'Probando...';
+                label.textContent = 'Forzando…';
                 return;
             }
 
@@ -516,59 +523,154 @@
             }
 
             if (info.lastChangeTime) {
-                const tag = info.state === 'online' ? 'Online desde' : 'Offline desde';
-                lastChangeSpans[index].textContent = `${tag} ${info.lastChangeTime}`;
+                const tag = info.state === 'online' ? 'Online' : 'Offline';
+                const via = info.method ? ` (${info.method})` : '';
+                lastChangeSpans[index].textContent = `${tag} desde ${info.lastChangeTime}${via}`;
             }
         }
 
-        async function checkStationHealth(index) {
-            const station = stations[index];
+        function recordMonitorResult(index, isUp, method) {
             const info = monitorState[index];
-            updateMonitorPillUI(index, 'checking');
-
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-
-            let isUp = false;
-            try {
-                const res = await fetch(station.url, {
-                    method: 'GET',
-                    mode: 'cors',
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
-                if (res.ok) {
-                    const text = await res.text();
-                    // Verifica que parezca un playlist HLS válido
-                    isUp = text.includes('#EXTM3U') || text.trim().length > 0;
-                }
-            } catch (err) {
-                isUp = false;
-            } finally {
-                clearTimeout(timer);
-            }
-
             const nextState = isUp ? 'online' : 'offline';
-            // Solo actualiza la hora cuando cambia de estado (o en la primera lectura)
             if (info.state !== nextState || !info.lastChangeTime) {
                 info.state = nextState;
                 info.lastChangeTime = formatNowTime();
             } else {
                 info.state = nextState;
             }
-
+            info.method = method || '';
             updateMonitorPillUI(index, nextState);
         }
 
-        async function checkAllStations() {
-            // Chequea en lotes de 4 para no saturar red ni CPU
-            const batchSize = 4;
-            for (let i = 0; i < stations.length; i += batchSize) {
-                const batch = [];
-                for (let j = i; j < Math.min(i + batchSize, stations.length); j++) {
-                    batch.push(checkStationHealth(j));
+        // Intento rápido por fetch
+        async function probeViaFetch(url) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+            try {
+                const res = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                if (!res.ok) return false;
+                const text = await res.text();
+                return text.includes('#EXTM3U') || text.includes('.ts') || text.includes('.m4s') || text.trim().length > 0;
+            } catch (_) {
+                return false;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // Prueba forzada real usando Hls.js temporal sin audio ni interferencia con mainPlayer
+        function probeViaHls(url) {
+            return new Promise((resolve) => {
+                if (!hlsSupported()) {
+                    // Fallback para navegadores con HLS nativo (ej. Safari/iOS)
+                    const tempAudio = document.createElement('audio');
+                    tempAudio.muted = true;
+                    tempAudio.preload = 'metadata';
+                    let settled = false;
+                    const finish = (ok) => {
+                        if (settled) return;
+                        settled = true;
+                        clearTimeout(timer);
+                        tempAudio.removeAttribute('src');
+                        tempAudio.load();
+                        resolve(ok);
+                    };
+                    const timer = setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
+                    tempAudio.addEventListener('loadedmetadata', () => finish(true), { once: true });
+                    tempAudio.addEventListener('canplay', () => finish(true), { once: true });
+                    tempAudio.addEventListener('error', () => finish(false), { once: true });
+                    tempAudio.src = url;
+                    return;
                 }
-                await Promise.all(batch);
+
+                const probeHls = new Hls({
+                    enableWorker: true,
+                    autoStartLoad: true,
+                    maxBufferLength: 2,
+                    maxMaxBufferLength: 4,
+                    manifestLoadingMaxRetry: 1,
+                    levelLoadingMaxRetry: 1,
+                    fragLoadingMaxRetry: 1
+                });
+
+                let settled = false;
+                const finish = (ok) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    try { probeHls.stopLoad(); } catch (_) {}
+                    try { probeHls.destroy(); } catch (_) {}
+                    resolve(ok);
+                };
+
+                const timer = setTimeout(() => finish(false), PROBE_TIMEOUT_MS);
+
+                probeHls.on(Hls.Events.MANIFEST_PARSED, () => finish(true));
+                probeHls.on(Hls.Events.FRAG_LOADED, () => finish(true));
+                probeHls.on(Hls.Events.ERROR, (_event, data) => {
+                    if (data && data.fatal) finish(false);
+                });
+
+                try {
+                    probeHls.loadSource(url);
+                } catch (_) {
+                    finish(false);
+                }
+            });
+        }
+
+        // Fuerza el chequeo de una emisora: primero fetch rápido, luego prueba HLS forzada si hace falta
+        async function forceCheckStation(index) {
+            // Si actualmente está reproduciendo y suena, ya está activa
+            if (currentIndex === index && !audio.paused) {
+                recordMonitorResult(index, true, 'live');
+                return true;
+            }
+
+            updateMonitorPillUI(index, 'checking');
+            const url = stations[index].url;
+
+            const okFetch = await probeViaFetch(url);
+            if (okFetch) {
+                recordMonitorResult(index, true, 'fetch');
+                return true;
+            }
+
+            // Si fetch falló (por CORS o bloqueo), forzamos prueba real con Hls
+            const okHls = await probeViaHls(url);
+            if (okHls) {
+                recordMonitorResult(index, true, 'hls');
+                return true;
+            }
+
+            recordMonitorResult(index, false, 'hls');
+            return false;
+        }
+
+        async function forceCheckAllStations() {
+            if (isForcingAll) return;
+            isForcingAll = true;
+            const forceBtn = document.getElementById('forceAllBtn');
+            forceBtn.disabled = true;
+
+            try {
+                // Lotes de 3 para forzar sondas HLS sin saturar la red
+                const batchSize = 3;
+                for (let i = 0; i < stations.length; i += batchSize) {
+                    const batch = [];
+                    for (let j = i; j < Math.min(i + batchSize, stations.length); j++) {
+                        batch.push(forceCheckStation(j));
+                    }
+                    await Promise.all(batch);
+                }
+            } finally {
+                isForcingAll = false;
+                forceBtn.disabled = false;
             }
         }
 
@@ -588,8 +690,8 @@
                 dot.style.backgroundColor = 'var(--online-color)';
                 dot.style.boxShadow = '0 0 8px var(--online-color)';
                 label.textContent = 'Monitor: ON (30s)';
-                checkAllStations();
-                monitorTimer = setInterval(checkAllStations, MONITOR_INTERVAL_MS);
+                forceCheckAllStations();
+                monitorTimer = setInterval(forceCheckAllStations, MONITOR_INTERVAL_MS);
             } else {
                 btn.classList.remove('monitoring');
                 dot.style.backgroundColor = 'var(--text-muted)';
@@ -602,11 +704,11 @@
             setMonitoringEnabled(!isMonitoring);
         });
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            checkAllStations();
+        document.getElementById('forceAllBtn').addEventListener('click', () => {
+            forceCheckAllStations();
         });
 
-        // ============ HLS: UNA SOLA INSTANCIA REUTILIZABLE ============
+        // ============ HLS PRINCIPAL: REPRODUCCIÓN ============
         function ensureHls() {
             if (hls || !hlsSupported()) return hls;
             hls = new Hls({
@@ -675,6 +777,7 @@
             if (retryCount >= MAX_RETRIES) {
                 isConnecting = false;
                 setStatus(index, 'Error al conectar • Toca de nuevo');
+                recordMonitorResult(index, false, 'player');
                 syncUI();
                 stopWatchdog();
                 return;
@@ -812,12 +915,7 @@
             isConnecting = false;
             clearTimeout(connectTimeout);
             retryCount = 0;
-            // Si está reproduciendo en vivo, también marca Online si no estaba marcado
-            if (monitorState[currentIndex].state !== 'online') {
-                monitorState[currentIndex].state = 'online';
-                monitorState[currentIndex].lastChangeTime = formatNowTime();
-                updateMonitorPillUI(currentIndex, 'online');
-            }
+            recordMonitorResult(currentIndex, true, 'live');
             setStatus(currentIndex, 'En vivo');
             floatingStatus.textContent = 'En vivo';
             syncUI();
