@@ -43,9 +43,9 @@ button{font-family:inherit}
 .now-playing{position:sticky;top:76px;padding:18px;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,22px 100%,0 calc(100% - 22px))}
 .np-head{display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
 .np-head b{color:var(--cyan)}
-.np-logo-wrap{margin:18px 0 14px;padding:14px;display:flex;align-items:center;justify-content:center;position:relative;overflow:visible;background:radial-gradient(ellipse at center,rgba(0,229,255,.08),transparent 68%)}
+.np-logo-wrap{margin:18px auto;padding:0;width:172px;height:172px;flex:none;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#05080f;border:1px solid var(--line2)}
 .np-logo-wrap:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 62%,rgba(0,229,255,.06));pointer-events:none;z-index:0}
-.np-logo{width:172px;height:172px;flex:0 0 auto;display:block;object-fit:contain;object-position:center center;padding:20px;background:#05080f;border:1px solid var(--line2);position:relative;z-index:1;filter:drop-shadow(0 10px 22px rgba(0,0,0,.7))}
+.np-logo{width:76%;height:76%;flex:0 0 auto;display:block;object-fit:contain;object-position:center center;padding:0;background:transparent;border:0;position:relative;z-index:1;filter:drop-shadow(0 8px 18px rgba(0,0,0,.65))}
 .np-empty{font-family:"JetBrains Mono",monospace;color:var(--muted);font-size:12px;letter-spacing:1px;text-align:center;padding:0 12px}
 .np-freq{font-family:Orbitron,sans-serif;font-size:34px;line-height:1;letter-spacing:1px;margin:4px 0 2px}
 .np-freq small{font-size:14px;color:var(--cyan)}
@@ -140,8 +140,8 @@ button{font-family:inherit}
   .top-hud .hide-m{display:none}
   .layout{grid-template-columns:1fr}
   .now-playing{position:static;clip-path:none;padding:16px}
-  .np-logo-wrap{padding:10px;margin:12px 0;min-height:0}
-  .np-logo{width:min(136px,58vw);height:min(136px,58vw);padding:16px}
+  .np-logo-wrap{width:min(118px,42vw);height:min(118px,42vw);margin:12px auto;padding:0}
+  .np-logo{width:76%;height:76%}
   .np-freq{font-size:28px}
   .stations-head h2{font-size:21px}
   body{padding-bottom:110px}
@@ -156,8 +156,8 @@ button{font-family:inherit}
   .clock{display:none}
   .layout{gap:14px}
   .now-playing{padding:14px}
-  .np-logo-wrap{padding:8px}
-  .np-logo{width:min(124px,52vw);height:min(124px,52vw);padding:14px}
+  .np-logo-wrap{width:min(102px,38vw);height:min(102px,38vw);margin:10px auto}
+  .np-logo{width:74%;height:74%}
   .np-controls{gap:10px}
   .controls{flex-direction:column}
   .refresh-btn{justify-content:center}
