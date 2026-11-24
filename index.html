@@ -121,6 +121,12 @@
         let lastTime = -1;
         let stallCount = 0;
         let isMuted = false;
+        let userRequestedStop = false; // true SOLO si el usuario tocó pausar
+        let wasPlaying = false; // true cuando ya sonó al menos una vez
+        let consecutiveFatal = 0;
+        let lastFatalAt = 0;
+        let isLoadingVariant = false; // true mientras loadOneVariant espera MANIFEST_PARSED
+        let resumeTimer = null;
 
         const gridContainer = document.getElementById('stationsGrid');
         const activeCards = [];
@@ -271,14 +277,27 @@
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (hls._token !== playToken) return;
                 if (!data.fatal) return;
-                console.debug('[HLS]', data.type, data.details, 'variante', variantIndex + 1, '/', variantList.length);
+                // Si loadOneVariant ya está manejando este error, no hacer doble failover
+                if (isLoadingVariant) return;
+                console.debug('[HLS]', data.type, data.details, 'variante', variantIndex + 1, '/', variantList.length, 'wasPlaying=', wasPlaying);
                 if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                    try { hls.recoverMediaError(); } catch(e) { failoverToNextVariant(); }
-                } else {
-                    // NETWORK_ERROR u otro fatal: NO recargar el mismo master.
-                    // Pasar a la siguiente variante / pathway.
-                    failoverToNextVariant();
+                    try { hls.recoverMediaError(); return; } catch(e) {}
                 }
+                // Ya estaba sonando: un fragmento malo NO es motivo para destruir el stream.
+                // Primero reintentar la MISMA variante, solo cambiar de pathway si falla 3 veces seguidas.
+                if (wasPlaying) {
+                    const now = Date.now();
+                    consecutiveFatal = (now - lastFatalAt < 15000) ? consecutiveFatal + 1 : 1;
+                    lastFatalAt = now;
+                    if (consecutiveFatal < 3) {
+                        setStatus(currentIndex, 'Reconectando…');
+                        try { hls.startLoad(); } catch(e) {}
+                        return;
+                    }
+                    consecutiveFatal = 0;
+                }
+                // Aún no sonó: sí tiene sentido probar la siguiente variante de una vez
+                failoverToNextVariant();
             });
             return hls;
         }
@@ -288,6 +307,7 @@
         // Devuelve true si el manifest cargó, false si hay que probar la siguiente.
         function loadOneVariant(url, token) {
             return new Promise((resolve) => {
+                isLoadingVariant = true;
                 destroyHls();
                 ensureHls();
                 if (!hls) { resolve(false); return; }
@@ -296,7 +316,7 @@
                 const timer = setTimeout(() => { if (!settled) { settled = true; cleanup(); resolve(false); } }, 9000);
                 const onParsed = () => { if (settled) return; settled = true; cleanup(); resolve(true); };
                 const onError = (e, data) => { if (!data.fatal || settled) return; settled = true; cleanup(); resolve(false); };
-                const cleanup = () => { clearTimeout(timer); try { hls.off(Hls.Events.MANIFEST_PARSED, onParsed); } catch(e){} try { hls.off(Hls.Events.ERROR, onError); } catch(e){} };
+                const cleanup = () => { clearTimeout(timer); isLoadingVariant = false; try { hls.off(Hls.Events.MANIFEST_PARSED, onParsed); } catch(e){} try { hls.off(Hls.Events.ERROR, onError); } catch(e){} };
                 hls.on(Hls.Events.MANIFEST_PARSED, onParsed);
                 hls.on(Hls.Events.ERROR, onError);
                 hls.loadSource(url);
@@ -305,22 +325,33 @@
 
         function failoverToNextVariant() {
             if (playToken === 0 || currentIndex < 0) return;
-            // Evitar doble failover si ya estamos cambiando
             if (failoverToNextVariant._busy) return;
             failoverToNextVariant._busy = true;
-            setTimeout(() => { failoverToNextVariant._busy = false; }, 500);
+            setTimeout(() => { failoverToNextVariant._busy = false; }, 800);
             const next = variantIndex + 1;
             if (next < variantList.length) {
                 variantIndex = next;
                 setStatus(currentIndex, `Probando otra señal… (${next + 1}/${variantList.length})`);
                 const token = playToken;
+                // Si ya estaba sonando, NO hacer destroyHls(): eso dispara 'pause' + 'emptied'
+                // y deja al audio en Pausado. Reutilizar la misma instancia con loadSource().
+                if (wasPlaying && hls) {
+                    try {
+                        hls._token = token;
+                        hls.stopLoad();
+                        hls.loadSource(variantList[next]);
+                        // No llamar audio.play() aquí: si ya estaba sonando, el elemento sigue
+                        // en estado "playing" y Hls.js reanuda solo. Forzar play() fuera de gesto
+                        // en iOS lo bloquea y lo deja en Pausado.
+                        return;
+                    } catch(e) { /* caer al camino de loadOneVariant */ }
+                }
                 loadOneVariant(variantList[next], token).then(ok => {
                     if (token !== playToken) return;
                     if (ok) { const p = audio.play(); if (p) p.catch(err => handlePlayBlocked(err)); }
                     else failoverToNextVariant();
                 });
             } else {
-                // Ya probamos todas las variantes Hls.js -> intentar nativo (Safari maneja steering solo)
                 tryNativeFallback(currentIndex, playToken);
             }
         }
@@ -365,12 +396,17 @@
             lastTime = -1; stallCount = 0;
             stallTimer = setInterval(() => {
                 if (currentIndex < 0) return;
+                // Si está pausado, buscando, o sin datos, NO es un stall: es buffering / pausa real
                 if (audio.paused || audio.ended || audio.seeking) { lastTime = audio.currentTime; stallCount = 0; return; }
                 if (audio.readyState === 0) return;
                 if (audio.currentTime === lastTime) {
                     stallCount++;
+                    // 1er aviso (5s): solo reanudar carga, sin cambiar de variante
                     if (stallCount === 1) { if (hls) { try { hls.startLoad(); } catch(e){} } }
-                    else if (stallCount >= 2) { stallCount = 0; failoverToNextVariant(); }
+                    // 2do aviso (10s): intentar recuperar media
+                    else if (stallCount === 2) { if (hls) { try { hls.recoverMediaError(); } catch(e){} } }
+                    // 3er aviso (15s): ahora sí, cambiar de variante
+                    else if (stallCount >= 3) { stallCount = 0; failoverToNextVariant(); }
                 } else stallCount = 0;
                 lastTime = audio.currentTime;
             }, 5000);
@@ -406,6 +442,10 @@
             currentIndex = index;
             isConnecting = true;
             hasLoadedSource = false;
+            userRequestedStop = false;
+            wasPlaying = false;
+            consecutiveFatal = 0;
+            clearTimeout(resumeTimer);
             variantList = []; variantIndex = 0;
             lastTime = -1; stallCount = 0;
             setStatus(index, 'Conectando…');
@@ -457,8 +497,10 @@
 
         function stopStation() {
             playToken++;
-            clearTimeout(retryTimer); clearTimeout(connectTimeout); stopWatchdog();
+            clearTimeout(retryTimer); clearTimeout(connectTimeout); clearTimeout(resumeTimer); stopWatchdog();
             isConnecting = false; hasLoadedSource = false;
+            userRequestedStop = true;
+            wasPlaying = false;
             if (hls) hls.stopLoad();
             audio.pause();
             if (!hlsSupported() && nativeHlsSupported()) { audio.removeAttribute('src'); audio.load(); }
@@ -470,15 +512,40 @@
         audio.addEventListener('playing', () => {
             if (currentIndex < 0) return;
             isConnecting = false; hasLoadedSource = true;
-            clearTimeout(connectTimeout);
+            wasPlaying = true;
+            consecutiveFatal = 0;
+            clearTimeout(resumeTimer); clearTimeout(connectTimeout);
             setStatus(currentIndex, 'En vivo'); floatingStatus.textContent = 'En vivo';
             syncUI(); updateMediaSession(currentIndex);
         });
+        audio.addEventListener('timeupdate', () => { if (wasPlaying) consecutiveFatal = 0; });
         audio.addEventListener('waiting', () => {
             if (currentIndex < 0 || audio.paused) return;
             if (statusSpans[currentIndex].textContent === 'En vivo') setStatus(currentIndex, 'Cargando…');
         });
-        audio.addEventListener('pause', () => { if (currentIndex >= 0 && !isConnecting) syncUI(); });
+        audio.addEventListener('pause', () => {
+            if (currentIndex < 0) return;
+            // Pausa que pidió el usuario (botón / MediaSession stop): respetar, mostrar Pausado
+            if (userRequestedStop) { syncUI(); return; }
+            // Si nunca sonó, es la pausa inicial de playStation(): ignorar
+            if (!wasPlaying && isConnecting) return;
+            // Si ya estaba sonando y se pausó SOLO (error de Hls, destroy, interrupción del sistema,
+            // MediaSession pause del SO): NO quedarse en Pausado, intentar reanudar solo.
+            // Esto es lo que veías como "empieza y luego se pone en Pausado".
+            if (wasPlaying && hasLoadedSource && !audio.ended) {
+                console.debug('[Audio] pausa espontánea, reanudando... readyState=', audio.readyState, 'error=', audio.error);
+                setStatus(currentIndex, 'Reconectando…');
+                syncUI();
+                clearTimeout(resumeTimer);
+                resumeTimer = setTimeout(() => {
+                    if (currentIndex < 0 || userRequestedStop) return;
+                    const p = audio.play();
+                    if (p) p.catch(err => handlePlayBlocked(err));
+                }, 600);
+                return;
+            }
+            if (!isConnecting) syncUI();
+        });
         audio.addEventListener('canplay', () => {
             // Si ya cargó pero play() fue bloqueado, no forzar; el usuario toca ▶ de nuevo.
             // Este evento solo confirma que hay fuente.
@@ -504,7 +571,9 @@
                 card.classList.toggle('playing', isPlaying);
                 card.classList.toggle('connecting', isConn);
                 playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
-                if (!isPlaying && !isConn && isCurrent && statusSpans[idx].textContent === 'En vivo') statusSpans[idx].textContent = 'Pausado';
+                // Antes: cualquier 'pause' (incluso por buffering) convertía "En vivo" en "Pausado".
+                // Ahora: solo poner "Pausado" si el usuario lo pidió de verdad.
+                if (!isPlaying && !isConn && isCurrent && userRequestedStop && statusSpans[idx].textContent === 'En vivo') statusSpans[idx].textContent = 'Pausado';
             });
             if (currentIndex >= 0) {
                 const isPlaying = !audio.paused && !audio.ended;
@@ -519,8 +588,15 @@
             if (!('mediaSession' in navigator)) return;
             const station = stations[index];
             navigator.mediaSession.metadata = new MediaMetadata({ title: station.name, artist: 'Radios Streaming - Guatemala', album: 'Radios GUATE', artwork: [{ src: station.logo, sizes: '96x96', type: 'image/png' }, { src: station.logo, sizes: '128x128', type: 'image/png' }, { src: station.logo, sizes: '192x192', type: 'image/png' }, { src: station.logo, sizes: '512x512', type: 'image/png' }] });
-            navigator.mediaSession.setActionHandler('play', () => { if (currentIndex >= 0) playStation(currentIndex); });
-            navigator.mediaSession.setActionHandler('pause', () => stopStation());
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (currentIndex < 0) return;
+                // Si ya hay fuente, solo reanudar, no recargar desde cero
+                if (hasLoadedSource) { userRequestedStop = false; const p = audio.play(); if (p) p.catch(err => handlePlayBlocked(err)); }
+                else playStation(currentIndex);
+            });
+            // Pausa desde el centro de control / auriculares: pausar, pero NO destruir (stopStation).
+            // Así el usuario puede darle play de nuevo sin recargar el stream.
+            navigator.mediaSession.setActionHandler('pause', () => { userRequestedStop = true; audio.pause(); syncUI(); });
             navigator.mediaSession.setActionHandler('stop', () => stopStation());
             navigator.mediaSession.setActionHandler('nexttrack', () => { const next = currentIndex >= 0 ? (currentIndex + 1) % stations.length : 0; playStation(next); });
             navigator.mediaSession.setActionHandler('previoustrack', () => { const prev = currentIndex > 0 ? currentIndex - 1 : stations.length - 1; playStation(prev); });
