@@ -4,268 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radios On Line GUATE</title>
-
-    <!-- Configuración PWA / GitHub Pages -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0b0f19">
-
-    <!-- Configuración para iPhone / iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Radios GUATE">
-
-    <!-- Iconos -->
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=2">
     <link rel="icon" type="image/png" href="./icon.png?v=2">
-
-    <!-- Importar Hls.js -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
     <style>
-        :root {
-            --bg-color: #0b0f19;
-            --card-bg: #131d31;
-            --card-border: #1e293b;
-            --accent-color: #38bdf8;
-            --accent-glow: rgba(56, 189, 248, 0.25);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px 15px 120px 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            touch-action: manipulation;
-        }
-
-        .container { width: 100%; max-width: 1100px; }
-        header { text-align: center; margin-bottom: 20px; }
-        h1 {
-            font-size: 1.8rem; margin: 0 0 6px 0;
-            background: linear-gradient(135deg, #38bdf8, #818cf8);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        p.subtitle { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
-
-        .controls-container {
-            margin-bottom: 25px; display: flex; justify-content: center; align-items: center;
-            gap: 10px; width: 100%; max-width: 550px; margin-left: auto; margin-right: auto;
-        }
-        .search-input {
-            flex: 1; background-color: var(--card-bg); border: 1px solid var(--card-border);
-            border-radius: 25px; padding: 12px 18px; color: var(--text-main);
-            font-size: 0.95rem; outline: none; transition: border-color 0.2s;
-        }
-        .search-input:focus { border-color: var(--accent-color); }
-        .refresh-btn {
-            background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main);
-            border-radius: 25px; padding: 11px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            display: flex; align-items: center; gap: 8px; transition: all 0.2s ease;
-            white-space: nowrap; -webkit-tap-highlight-color: transparent;
-        }
-        .refresh-btn:active { transform: scale(0.96); background-color: #17233d; }
-        .refresh-btn svg { width: 16px; height: 16px; fill: currentColor; }
-
-        .grid-stations {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
-        }
-        .station-card {
-            background-color: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
-            padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px;
-            transition: all 0.2s ease; position: relative; overflow: hidden;
-        }
-        .station-card::before {
-            content: ""; position: absolute; bottom: -10px; right: -10px; width: 110px; height: 110px;
-            background-image: var(--card-bg-logo); background-size: contain; background-repeat: no-repeat;
-            background-position: bottom right; opacity: 0.05; pointer-events: none; transition: opacity 0.3s ease;
-        }
-        .station-card.playing::before { opacity: 0.12; }
-        .station-card.playing {
-            border-color: var(--accent-color); box-shadow: 0 0 20px var(--accent-glow); background-color: #17233d;
-        }
-        .station-card.connecting { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,.25); }
-
-        .logo-container {
-            width: 100px; height: 75px; background: #090d16; border-radius: 12px;
-            display: flex; justify-content: center; align-items: center; padding: 6px;
-            border: 1px solid var(--card-border); position: relative; z-index: 2;
-        }
-        .station-logo { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .station-info { text-align: center; width: 100%; position: relative; z-index: 2; }
-        .station-name {
-            font-weight: 700; font-size: 1rem; margin-bottom: 3px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .status { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .station-card.playing .status { color: #34d399; }
-        .station-card.connecting .status { color: #fbbf24; }
-
-        .custom-player {
-            width: 100%; display: flex; align-items: center; justify-content: space-between;
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(11, 15, 25, 0.98));
-            border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 20px; padding: 6px 12px;
-            box-sizing: border-box; gap: 10px; position: relative; z-index: 2;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px); transition: all 0.3s ease;
-        }
-        .station-card.playing .custom-player {
-            border-color: rgba(56, 189, 248, 0.6);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 15px rgba(56, 189, 248, 0.25);
-        }
-        .play-btn {
-            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); border: none;
-            width: 42px; height: 42px; border-radius: 50%; color: #090d16;
-            display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0;
-            position: relative; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); -webkit-tap-highlight-color: transparent;
-        }
-        .play-btn::after {
-            content: ''; position: absolute; inset: -3px; border-radius: 50%;
-            border: 1px solid rgba(56, 189, 248, 0.5); opacity: 0.6; transition: all 0.3s ease;
-        }
-        .play-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(56, 189, 248, 0.8); }
-        .play-btn:active { transform: scale(0.95); }
-        .station-card.playing .play-btn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6); color: #022c22;
-        }
-        .station-card.playing .play-btn::after { border-color: rgba(16, 185, 129, 0.8); animation: pulse-ring 2s infinite; }
-        @keyframes pulse-ring {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.15); opacity: 0.2; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-        .play-btn svg { width: 20px; height: 20px; fill: currentColor; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-
-        .cyber-equalizer {
-            display: flex; align-items: flex-end; gap: 3px; height: 18px; padding: 0 4px;
-            flex-grow: 1; justify-content: center; opacity: 0.3; transition: opacity 0.3s ease;
-        }
-        .station-card.playing .cyber-equalizer { opacity: 1; }
-        .eq-bar { width: 3px; background: var(--accent-color); border-radius: 2px; transform-origin: bottom; height: 20%; }
-        .station-card.playing .eq-bar:nth-child(1) { animation: eqAnim 0.8s ease-in-out infinite alternate; }
-        .station-card.playing .eq-bar:nth-child(2) { animation: eqAnim 1.1s ease-in-out infinite alternate 0.2s; }
-        .station-card.playing .eq-bar:nth-child(3) { animation: eqAnim 0.7s ease-in-out infinite alternate 0.4s; }
-        .station-card.playing .eq-bar:nth-child(4) { animation: eqAnim 0.9s ease-in-out infinite alternate 0.1s; }
-        @keyframes eqAnim {
-            0% { height: 15%; background-color: #38bdf8; }
-            50% { height: 95%; background-color: #818cf8; }
-            100% { height: 35%; background-color: #34d399; }
-        }
-
-        .vol-btn-group {
-            display: flex; align-items: center; gap: 4px; background: rgba(30, 41, 59, 0.7);
-            padding: 4px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .vol-mute-btn {
-            background: transparent; border: none; color: var(--text-muted); display: flex;
-            align-items: center; padding: 6px; cursor: pointer; border-radius: 50%;
-            transition: all 0.2s ease; -webkit-tap-highlight-color: transparent;
-        }
-        .vol-mute-btn:hover { color: var(--accent-color); background: rgba(56, 189, 248, 0.1); }
-        .vol-mute-btn.muted { color: #f43f5e; background: rgba(244, 63, 94, 0.15); }
-        .vol-mute-btn svg { width: 18px; height: 18px; fill: currentColor; }
-
-        .floating-player {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            background: rgba(11, 15, 25, 0.88); backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
-            border-top: 1px solid rgba(56, 189, 248, 0.3);
-            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            padding: 12px 20px; box-sizing: border-box; display: none;
-            justify-content: space-between; align-items: center; z-index: 1000; transition: all 0.3s ease;
-        }
-        .floating-player.active { display: flex; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .floating-info { display: flex; align-items: center; gap: 14px; }
-        .floating-logo {
-            width: 44px; height: 44px; object-fit: contain; background: #090d16; border-radius: 10px;
-            padding: 4px; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        }
-        .floating-text .title { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.3px; }
-        .floating-text .desc {
-            font-size: 0.75rem; color: #34d399; display: flex; align-items: center; gap: 6px;
-            font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-        }
-        .floating-text .desc::before {
-            content: ''; display: inline-block; width: 6px; height: 6px;
-            background-color: #34d399; border-radius: 50%; box-shadow: 0 0 8px #34d399; animation: blink 1.5s infinite;
-        }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-        #pwa-install-banner {
-            display: none; position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 420px; background: var(--card-bg); color: var(--text-main);
-            padding: 16px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-            z-index: 2000; border: 1px solid var(--accent-color);
-        }
-        @media (max-width: 480px) {
-            .controls-container { flex-direction: column; }
-            .search-input, .refresh-btn { width: 100%; justify-content: center; }
-        }
+        :root { --bg-color:#0b0f19; --card-bg:#131d31; --card-border:#1e293b; --accent-color:#38bdf8; --accent-glow:rgba(56,189,248,.25); --text-main:#f8fafc; --text-muted:#94a3b8; }
+        body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background-color:var(--bg-color); color:var(--text-main); margin:0; padding:20px 15px 120px 15px; display:flex; flex-direction:column; align-items:center; min-height:100vh; touch-action:manipulation; }
+        .container { width:100%; max-width:1100px; }
+        header { text-align:center; margin-bottom:20px; }
+        h1 { font-size:1.8rem; margin:0 0 6px 0; background:linear-gradient(135deg,#38bdf8,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        p.subtitle { color:var(--text-muted); font-size:.9rem; margin:0; }
+        .controls-container { margin-bottom:25px; display:flex; justify-content:center; align-items:center; gap:10px; width:100%; max-width:550px; margin-left:auto; margin-right:auto; }
+        .search-input { flex:1; background-color:var(--card-bg); border:1px solid var(--card-border); border-radius:25px; padding:12px 18px; color:var(--text-main); font-size:.95rem; outline:none; }
+        .search-input:focus { border-color:var(--accent-color); }
+        .refresh-btn { background-color:var(--card-bg); border:1px solid var(--card-border); color:var(--text-main); border-radius:25px; padding:11px 18px; font-size:.9rem; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+        .refresh-btn:active { transform:scale(.96); background-color:#17233d; }
+        .refresh-btn svg { width:16px; height:16px; fill:currentColor; }
+        .grid-stations { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+        .station-card { background-color:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:12px; transition:all .2s ease; position:relative; overflow:hidden; }
+        .station-card::before { content:""; position:absolute; bottom:-10px; right:-10px; width:110px; height:110px; background-image:var(--card-bg-logo); background-size:contain; background-repeat:no-repeat; background-position:bottom right; opacity:.05; pointer-events:none; }
+        .station-card.playing::before { opacity:.12; }
+        .station-card.playing { border-color:var(--accent-color); box-shadow:0 0 20px var(--accent-glow); background-color:#17233d; }
+        .station-card.connecting { border-color:#f59e0b; box-shadow:0 0 14px rgba(245,158,11,.25); }
+        .logo-container { width:100px; height:75px; background:#090d16; border-radius:12px; display:flex; justify-content:center; align-items:center; padding:6px; border:1px solid var(--card-border); position:relative; z-index:2; cursor:pointer; }
+        .station-logo { max-width:100%; max-height:100%; object-fit:contain; }
+        .station-info { text-align:center; width:100%; position:relative; z-index:2; }
+        .station-name { font-weight:700; font-size:1rem; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .status { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+        .station-card.playing .status { color:#34d399; }
+        .station-card.connecting .status { color:#fbbf24; }
+        .custom-player { width:100%; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(11,15,25,.98)); border:1px solid rgba(56,189,248,.2); border-radius:20px; padding:6px 12px; box-sizing:border-box; gap:10px; position:relative; z-index:2; }
+        .station-card.playing .custom-player { border-color:rgba(56,189,248,.6); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 15px rgba(56,189,248,.25); }
+        .play-btn { background:linear-gradient(135deg,#38bdf8 0%,#0284c7 100%); border:none; width:42px; height:42px; border-radius:50%; color:#090d16; display:flex; justify-content:center; align-items:center; cursor:pointer; flex-shrink:0; position:relative; box-shadow:0 0 12px rgba(56,189,248,.4); transition:all .25s; -webkit-tap-highlight-color:transparent; }
+        .play-btn:hover { transform:scale(1.05); }
+        .play-btn:active { transform:scale(.95); }
+        .station-card.playing .play-btn { background:linear-gradient(135deg,#10b981 0%,#059669 100%); color:#022c22; }
+        .play-btn svg { width:20px; height:20px; fill:currentColor; }
+        .cyber-equalizer { display:flex; align-items:flex-end; gap:3px; height:18px; padding:0 4px; flex-grow:1; justify-content:center; opacity:.3; }
+        .station-card.playing .cyber-equalizer { opacity:1; }
+        .eq-bar { width:3px; background:var(--accent-color); border-radius:2px; height:20%; }
+        .station-card.playing .eq-bar:nth-child(1) { animation:eqAnim .8s ease-in-out infinite alternate; }
+        .station-card.playing .eq-bar:nth-child(2) { animation:eqAnim 1.1s ease-in-out infinite alternate .2s; }
+        .station-card.playing .eq-bar:nth-child(3) { animation:eqAnim .7s ease-in-out infinite alternate .4s; }
+        .station-card.playing .eq-bar:nth-child(4) { animation:eqAnim .9s ease-in-out infinite alternate .1s; }
+        @keyframes eqAnim { 0%{height:15%;background-color:#38bdf8} 50%{height:95%;background-color:#818cf8} 100%{height:35%;background-color:#34d399} }
+        .vol-btn-group { display:flex; align-items:center; gap:4px; background:rgba(30,41,59,.7); padding:4px; border-radius:20px; border:1px solid rgba(255,255,255,.05); }
+        .vol-mute-btn { background:transparent; border:none; color:var(--text-muted); display:flex; align-items:center; padding:6px; cursor:pointer; border-radius:50%; }
+        .vol-mute-btn.muted { color:#f43f5e; background:rgba(244,63,94,.15); }
+        .vol-mute-btn svg { width:18px; height:18px; fill:currentColor; }
+        .floating-player { position:fixed; bottom:0; left:0; width:100%; background:rgba(11,15,25,.88); backdrop-filter:blur(16px) saturate(180%); -webkit-backdrop-filter:blur(16px) saturate(180%); border-top:1px solid rgba(56,189,248,.3); padding:12px 20px; box-sizing:border-box; display:none; justify-content:space-between; align-items:center; z-index:1000; }
+        .floating-player.active { display:flex; }
+        .floating-info { display:flex; align-items:center; gap:14px; }
+        .floating-logo { width:44px; height:44px; object-fit:contain; background:#090d16; border-radius:10px; padding:4px; border:1px solid rgba(56,189,248,.3); }
+        .floating-text .title { font-weight:700; font-size:.95rem; }
+        .floating-text .desc { font-size:.75rem; color:#34d399; display:flex; align-items:center; gap:6px; font-weight:600; text-transform:uppercase; }
+        #pwa-install-banner { display:none; position:fixed; bottom:15px; left:50%; transform:translateX(-50%); width:90%; max-width:420px; background:var(--card-bg); color:var(--text-main); padding:16px; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,.5); z-index:2000; border:1px solid var(--accent-color); }
+        @media (max-width:480px){ .controls-container{flex-direction:column} .search-input,.refresh-btn{width:100%;justify-content:center} }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <header>
-            <h1>Radios Streaming - GUATEMALA</h1>
-            <p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p>
-        </header>
-
+        <header><h1>Radios Streaming - GUATEMALA</h1><p class="subtitle">Selecciona tu estación favorita para iniciar la transmisión.</p></header>
         <div class="controls-container">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar emisora...">
-            <button id="refreshBtn" class="refresh-btn" title="Reiniciar Página">
-                <svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Actualizar
-            </button>
+            <button id="refreshBtn" class="refresh-btn" title="Reiniciar Página"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Actualizar</button>
         </div>
-
         <div class="grid-stations" id="stationsGrid"></div>
     </div>
-
-    <!-- Banner / Popup de aviso de instalación -->
     <div id="pwa-install-banner">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <strong style="font-size: 16px; color: var(--accent-color);">📲 Instalar App Radios</strong>
-            <button onclick="cerrarBanner()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted);">✕</button>
-        </div>
-        <p id="pwa-banner-text" style="font-size: 0.88rem; line-height: 1.4; margin: 0 0 14px 0; color: var(--text-muted);">
-            Instala esta aplicación en tu pantalla de inicio para acceder rápidamente.
-        </p>
-        <button id="pwa-install-btn" style="display: none; width: 100%; background: var(--accent-color); color: #0b0f19; border: none; padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer;">
-            Instalar en la pantalla de inicio
-        </button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><strong style="font-size:16px;color:var(--accent-color);">📲 Instalar App Radios</strong><button onclick="cerrarBanner()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">✕</button></div>
+        <p id="pwa-banner-text" style="font-size:.88rem;line-height:1.4;margin:0 0 14px 0;color:var(--text-muted);">Instala esta aplicación en tu pantalla de inicio para acceder rápidamente.</p>
+        <button id="pwa-install-btn" style="display:none;width:100%;background:var(--accent-color);color:#0b0f19;border:none;padding:10px;border-radius:10px;font-weight:bold;cursor:pointer;">Instalar en la pantalla de inicio</button>
     </div>
-
     <div class="floating-player" id="floatingPlayer">
-        <div class="floating-info">
-            <img id="floatingLogo" src="" alt="" class="floating-logo">
-            <div class="floating-text">
-                <div class="title" id="floatingTitle">Sin selección</div>
-                <div class="desc" id="floatingStatus">En vivo</div>
-            </div>
-        </div>
-        <button class="play-btn" id="floatingPlayBtn" title="Play/Pause">
-            <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
+        <div class="floating-info"><img id="floatingLogo" src="" alt="" class="floating-logo"><div class="floating-text"><div class="title" id="floatingTitle">Sin selección</div><div class="desc" id="floatingStatus">En vivo</div></div></div>
+        <button class="play-btn" id="floatingPlayBtn" title="Play/Pause"><svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
     </div>
 
-    <!--
-      ============================================================
-      CORRECCIÓN CLAVE: UN SOLO REPRODUCTOR PARA TODAS LAS RADIOS
-      Antes: 12 <audio> + 12 Hls.js cargando a la vez.
-      Ahora: 1 <audio> + 1 Hls.js reutilizado.
-      ============================================================
-    -->
-    <audio id="mainPlayer" preload="none" playsinline crossorigin="anonymous"></audio>
+    <!-- FIX 3: SIN crossorigin="anonymous".
+         Con crossorigin, el fallback nativo (Safari) exige CORS aunque el link directo no lo exige.
+         Hls.js ya hace fetch con CORS por su cuenta, no necesita este atributo. -->
+    <audio id="mainPlayer" preload="none" playsinline></audio>
 
     <script>
         const stations = [
@@ -283,14 +107,14 @@
             { name: "Flix Xela 93.9", url: "https://ddycmnicl95kp.cloudfront.net/live/bc0guefb9qsv/master.m3u8", logo: "flix.png" }
         ];
 
-        // ============ ESTADO GLOBAL - UN SOLO REPRODUCTOR ============
         const audio = document.getElementById('mainPlayer');
         let hls = null;
         let currentIndex = -1;
-        let playToken = 0;        // Invalida reintentos / play() viejos cuando cambias de radio
+        let playToken = 0;
         let isConnecting = false;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
+        let hasLoadedSource = false; // true cuando ya hay manifest / canplay, aunque play() haya sido bloqueado
+        let variantList = []; // URLs ordenadas por steering para la radio actual
+        let variantIndex = 0;
         let retryTimer = null;
         let connectTimeout = null;
         let stallTimer = null;
@@ -303,90 +127,123 @@
         const playBtns = [];
         const statusSpans = [];
         const muteBtns = [];
-
         const playIcon = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
         const pauseIcon = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
         const iconVolHigh = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>`;
         const iconMute = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`;
-
         const floatingPlayer = document.getElementById('floatingPlayer');
         const floatingPlayBtn = document.getElementById('floatingPlayBtn');
         const floatingTitle = document.getElementById('floatingTitle');
         const floatingStatus = document.getElementById('floatingStatus');
         const floatingLogo = document.getElementById('floatingLogo');
-
         const hlsSupported = () => window.Hls && Hls.isSupported();
         const nativeHlsSupported = () => audio.canPlayType('application/vnd.apple.mpegurl');
 
-        // ============ PWA (sin cambios de lógica) ============
+        // PWA (sin cambios)
         let deferredPrompt;
         const banner = document.getElementById('pwa-install-banner');
         const bannerText = document.getElementById('pwa-banner-text');
         const installBtn = document.getElementById('pwa-install-btn');
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-
         if (!isStandalone) {
-            if (isIOS) {
-                bannerText.innerHTML = 'Para guardar como App en tu iPhone:<br>1. Toca el botón <strong>Compartir</strong> (<span style="font-size:16px;">⎘</span>)<br>2. Elige <strong>"Añadir a pantalla de inicio"</strong>.';
-                banner.style.display = 'block';
-            } else {
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    e.preventDefault();
-                    deferredPrompt = e;
-                    bannerText.textContent = 'Añade Radios Streaming a tu pantalla de inicio para un acceso rápido.';
-                    installBtn.style.display = 'block';
-                    banner.style.display = 'block';
-                });
-            }
+            if (isIOS) { bannerText.innerHTML = 'Para guardar como App en tu iPhone:<br>1. Toca el botón <strong>Compartir</strong> (<span style="font-size:16px;">⎘</span>)<br>2. Elige <strong>"Añadir a pantalla de inicio"</strong>.'; banner.style.display = 'block'; }
+            else { window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; bannerText.textContent = 'Añade Radios Streaming a tu pantalla de inicio para un acceso rápido.'; installBtn.style.display = 'block'; banner.style.display = 'block'; }); }
         }
-        installBtn.addEventListener('click', () => {
-            banner.style.display = 'none';
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-            }
-        });
+        installBtn.addEventListener('click', () => { banner.style.display = 'none'; if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; }); } });
         function cerrarBanner() { banner.style.display = 'none'; }
 
-        // ============ CONSTRUIR TARJETAS (SIN <audio> POR TARJETA) ============
         stations.forEach((station, index) => {
             const card = document.createElement('div');
             card.className = 'station-card';
             card.style.setProperty('--card-bg-logo', `url('${station.logo}')`);
-            card.innerHTML = `
-                <div class="logo-container">
-                    <img src="${station.logo}" alt="${station.name}" class="station-logo" loading="lazy" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'">
-                </div>
-                <div class="station-info">
-                    <div class="station-name">${station.name}</div>
-                    <div class="status">Listo</div>
-                </div>
-                <div class="custom-player">
-                    <button class="play-btn" title="Reproducir">${playIcon}</button>
-                    <div class="cyber-equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>
-                    <div class="vol-btn-group">
-                        <button class="vol-mute-btn" title="Silenciar">${iconVolHigh}</button>
-                    </div>
-                </div>`;
+            card.innerHTML = `<div class="logo-container"><img src="${station.logo}" alt="${station.name}" class="station-logo" loading="lazy" onerror="this.src='https://via.placeholder.com/100x60?text=RADIO'"></div><div class="station-info"><div class="station-name">${station.name}</div><div class="status">Listo</div></div><div class="custom-player"><button class="play-btn" title="Reproducir">${playIcon}</button><div class="cyber-equalizer"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div><div class="vol-btn-group"><button class="vol-mute-btn" title="Silenciar">${iconVolHigh}</button></div></div>`;
             gridContainer.appendChild(card);
-
             const playBtn = card.querySelector('.play-btn');
             const status = card.querySelector('.status');
             const muteBtn = card.querySelector('.vol-mute-btn');
-
-            activeCards.push(card);
-            playBtns.push(playBtn);
-            statusSpans.push(status);
-            muteBtns.push(muteBtn);
-
+            activeCards.push(card); playBtns.push(playBtn); statusSpans.push(status); muteBtns.push(muteBtn);
             playBtn.addEventListener('click', () => handlePlayTrigger(index));
             muteBtn.addEventListener('click', toggleMute);
-            // Tocar el logo / nombre también reproduce, es más cómodo en móvil
             card.querySelector('.logo-container').addEventListener('click', () => handlePlayTrigger(index));
         });
 
-        // ============ HLS: UNA SOLA INSTANCIA REUTILIZABLE ============
+        // ============ FIX 1: RESOLVER STEERING NOSOTROS, NO DEJAR QUE HLS.JS ADIVINE ============
+        // El master trae 2 variantes con PATHWAY-ID distinto. Leemos el steering JSON,
+        // ordenamos por PATHWAY-PRIORITY y cargamos la variante directamente.
+        // Si la primera variante está muerta, pasamos a la segunda, no recargamos el mismo master.
+        function parseMaster(text, masterUrl) {
+            const lines = text.split(/\r?\n/);
+            const variants = [];
+            let steeringUri = null, defaultPathway = null;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('#EXT-X-CONTENT-STEERING:')) {
+                    const mUri = line.match(/SERVER-URI="([^"]+)"/);
+                    const mPath = line.match(/PATHWAY-ID="([^"]+)"/);
+                    if (mUri) steeringUri = mUri[1];
+                    if (mPath) defaultPathway = mPath[1];
+                }
+                if (line.startsWith('#EXT-X-STREAM-INF:')) {
+                    const mPath = line.match(/PATHWAY-ID="([^"]+)"/);
+                    // La siguiente línea no vacía y que no empieza con # es la URL
+                    for (let j = i + 1; j < lines.length; j++) {
+                        const u = lines[j].trim();
+                        if (!u) continue;
+                        if (u.startsWith('#')) break;
+                        try { variants.push({ url: new URL(u, masterUrl).href, pathway: mPath ? mPath[1] : '' }); } catch(e) { variants.push({ url: u, pathway: mPath ? mPath[1] : '' }); }
+                        break;
+                    }
+                }
+            }
+            return { variants, steeringUri, defaultPathway };
+        }
+
+        async function fetchWithTimeout(url, ms = 6000) {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), ms);
+            try { const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' }); return r; }
+            finally { clearTimeout(t); }
+        }
+
+        async function getOrderedVariants(masterUrl) {
+            try {
+                const res = await fetchWithTimeout(masterUrl, 6000);
+                if (!res.ok) throw new Error('master HTTP ' + res.status);
+                const text = await res.text();
+                // Si no es un master con steering, no hay nada que ordenar
+                if (!text.includes('#EXT-X-STREAM-INF')) return [masterUrl];
+                const { variants, steeringUri, defaultPathway } = parseMaster(text, masterUrl);
+                if (!variants.length) return [masterUrl];
+                let priority = [];
+                if (steeringUri) {
+                    try {
+                        const sUrl = new URL(steeringUri, masterUrl);
+                        // MediaPackage espera el pathway actual como parámetro
+                        if (defaultPathway) sUrl.searchParams.set('_HLS_pathway', defaultPathway);
+                        const sRes = await fetchWithTimeout(sUrl.href, 5000);
+                        if (sRes.ok) {
+                            const sj = await sRes.json();
+                            priority = sj['PATHWAY-PRIORITY'] || sj['PATHWAY-PRIORITY'.toLowerCase()] || sj.pathwayPriority || [];
+                        }
+                    } catch(e) { console.debug('[Steering] no se pudo leer steering, uso default', e); }
+                }
+                if (!priority.length && defaultPathway) priority = [defaultPathway];
+                const ordered = [...variants].sort((a, b) => {
+                    const ia = priority.indexOf(a.pathway), ib = priority.indexOf(b.pathway);
+                    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+                });
+                console.debug('[Steering] orden:', ordered.map(v => v.pathway + ' -> ' + v.url));
+                return ordered.map(v => v.url);
+            } catch (e) {
+                // Si fetch falla por CORS, devolvemos el master para que Hls.js lo intente igual.
+                // En ese caso el fallback nativo de abajo es el que salva en Safari.
+                console.debug('[Steering] fetch master falló, uso master directo', e);
+                return [masterUrl];
+            }
+        }
+
+        // ============ HLS ============
         function ensureHls() {
             if (hls || !hlsSupported()) return hls;
             hls = new Hls({
@@ -403,266 +260,242 @@
                 fragLoadingRetryDelay: 1000,
             });
             hls.attachMedia(audio);
-
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // Si el usuario ya cambió de radio, ignorar este manifest viejo
                 if (hls._token !== playToken) return;
+                hasLoadedSource = true;
                 if (currentIndex >= 0 && audio.paused) {
                     const p = audio.play();
-                    if (p) p.catch(() => {});
+                    if (p) p.catch(err => handlePlayBlocked(err));
                 }
             });
-
             hls.on(Hls.Events.ERROR, (event, data) => {
-                if (hls._token !== playToken) return; // Error de una radio vieja, ignorar
+                if (hls._token !== playToken) return;
                 if (!data.fatal) return;
-                console.debug('[HLS]', data.type, data.details);
-
-                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                    // Primeros 2 intentos: solo reanudar carga, sin recargar manifest
-                    if (retryCount < 2) {
-                        retryCount++;
-                        setStatus(currentIndex, `Reconectando… (${retryCount}/${MAX_RETRIES})`);
-                        setTimeout(() => { if (hls && hls._token === playToken) { try { hls.startLoad(); } catch(e){} } }, 800);
-                    } else {
-                        scheduleRetry(currentIndex, playToken);
-                    }
-                } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                    try { hls.recoverMediaError(); } catch(e) { scheduleRetry(currentIndex, playToken); }
+                console.debug('[HLS]', data.type, data.details, 'variante', variantIndex + 1, '/', variantList.length);
+                if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                    try { hls.recoverMediaError(); } catch(e) { failoverToNextVariant(); }
                 } else {
-                    // Error desconocido: destruir y recrear Hls limpio
-                    recreateHlsAndRetry(currentIndex, playToken);
+                    // NETWORK_ERROR u otro fatal: NO recargar el mismo master.
+                    // Pasar a la siguiente variante / pathway.
+                    failoverToNextVariant();
                 }
             });
             return hls;
         }
+        function destroyHls() { if (hls) { try { hls.destroy(); } catch(e){} hls = null; } }
 
-        function destroyHls() {
-            if (hls) { try { hls.destroy(); } catch(e){} hls = null; }
+        // Carga UNA variante y espera MANIFEST_PARSED o error fatal / timeout.
+        // Devuelve true si el manifest cargó, false si hay que probar la siguiente.
+        function loadOneVariant(url, token) {
+            return new Promise((resolve) => {
+                destroyHls();
+                ensureHls();
+                if (!hls) { resolve(false); return; }
+                hls._token = token;
+                let settled = false;
+                const timer = setTimeout(() => { if (!settled) { settled = true; cleanup(); resolve(false); } }, 9000);
+                const onParsed = () => { if (settled) return; settled = true; cleanup(); resolve(true); };
+                const onError = (e, data) => { if (!data.fatal || settled) return; settled = true; cleanup(); resolve(false); };
+                const cleanup = () => { clearTimeout(timer); try { hls.off(Hls.Events.MANIFEST_PARSED, onParsed); } catch(e){} try { hls.off(Hls.Events.ERROR, onError); } catch(e){} };
+                hls.on(Hls.Events.MANIFEST_PARSED, onParsed);
+                hls.on(Hls.Events.ERROR, onError);
+                hls.loadSource(url);
+            });
         }
 
-        function recreateHlsAndRetry(index, token) {
-            if (token !== playToken || index !== currentIndex) return;
-            destroyHls();
-            ensureHls();
-            if (hls) {
-                hls._token = token;
-                hls.loadSource(stations[index].url);
-                const p = audio.play();
-                if (p) p.catch(() => {});
+        function failoverToNextVariant() {
+            if (playToken === 0 || currentIndex < 0) return;
+            // Evitar doble failover si ya estamos cambiando
+            if (failoverToNextVariant._busy) return;
+            failoverToNextVariant._busy = true;
+            setTimeout(() => { failoverToNextVariant._busy = false; }, 500);
+            const next = variantIndex + 1;
+            if (next < variantList.length) {
+                variantIndex = next;
+                setStatus(currentIndex, `Probando otra señal… (${next + 1}/${variantList.length})`);
+                const token = playToken;
+                loadOneVariant(variantList[next], token).then(ok => {
+                    if (token !== playToken) return;
+                    if (ok) { const p = audio.play(); if (p) p.catch(err => handlePlayBlocked(err)); }
+                    else failoverToNextVariant();
+                });
+            } else {
+                // Ya probamos todas las variantes Hls.js -> intentar nativo (Safari maneja steering solo)
+                tryNativeFallback(currentIndex, playToken);
             }
         }
 
-        // ============ REINTENTO CON BACKOFF, SIN ?t= ============
-        // ANTES: url + '?t=' + Date.now() rompía el manifest y la caché de CloudFront.
-        // AHORA: siempre la URL limpia. Hls.js ya maneja lo live.
-        function scheduleRetry(index, token) {
+        async function tryNativeFallback(index, token) {
             if (token !== playToken || index !== currentIndex) return;
-            if (retryCount >= MAX_RETRIES) {
+            if (!nativeHlsSupported()) {
                 isConnecting = false;
                 setStatus(index, 'Error al conectar • Toca de nuevo');
-                syncUI();
-                stopWatchdog();
+                syncUI(); stopWatchdog();
                 return;
             }
-            retryCount++;
-            const delay = Math.min(1000 * retryCount, 3000);
-            setStatus(index, `Reintentando… (${retryCount}/${MAX_RETRIES})`);
-            floatingStatus.textContent = `Reintentando… (${retryCount}/${MAX_RETRIES})`;
+            setStatus(index, 'Probando reproductor nativo…');
+            destroyHls();
+            audio.src = stations[index].url;
+            try { audio.load(); } catch(e){}
+            try { await audio.play(); } catch(err) { handlePlayBlocked(err); }
+        }
 
-            clearTimeout(retryTimer);
-            retryTimer = setTimeout(() => {
-                if (token !== playToken || index !== currentIndex) return;
-                isConnecting = true;
-                if (hlsSupported()) {
-                    ensureHls();
-                    hls._token = token;
-                    hls.stopLoad();
-                    hls.loadSource(stations[index].url);
-                } else if (nativeHlsSupported()) {
-                    audio.src = stations[index].url;
-                    audio.load();
-                }
-                const p = audio.play();
-                if (p) p.catch(() => {});
-                armConnectTimeout(index, token);
-            }, delay);
+        function handlePlayBlocked(err) {
+            if (!err) return;
+            if (err.name === 'NotAllowedError') {
+                // Play bloqueado por autoplay: el manifest YA cargó, solo falta otro gesto.
+                // NO marcar como error, dejar hasLoadedSource=true para que el próximo click RESUMA.
+                isConnecting = false;
+                hasLoadedSource = true;
+                setStatus(currentIndex, 'Toca ▶ de nuevo');
+                floatingStatus.textContent = 'Toca ▶ de nuevo';
+                syncUI();
+            }
         }
 
         function armConnectTimeout(index, token) {
             clearTimeout(connectTimeout);
             connectTimeout = setTimeout(() => {
-                if (token === playToken && index === currentIndex && isConnecting) {
-                    scheduleRetry(index, token);
-                }
-            }, 10000);
+                if (token === playToken && index === currentIndex && isConnecting) failoverToNextVariant();
+            }, 12000);
         }
 
-        // ============ WATCHDOG: SOLO PARA LA RADIO ACTUAL ============
         function startWatchdog() {
             stopWatchdog();
-            lastTime = -1;
-            stallCount = 0;
+            lastTime = -1; stallCount = 0;
             stallTimer = setInterval(() => {
                 if (currentIndex < 0) return;
                 if (audio.paused || audio.ended || audio.seeking) { lastTime = audio.currentTime; stallCount = 0; return; }
                 if (audio.readyState === 0) return;
                 if (audio.currentTime === lastTime) {
                     stallCount++;
-                    if (stallCount === 1) {
-                        // Primer aviso: intento suave, sin recargar manifest
-                        if (hls) { try { hls.startLoad(); } catch(e){} }
-                    } else if (stallCount >= 2) {
-                        // Dos ciclos seguidos sin avanzar (~10s) = stall real
-                        stallCount = 0;
-                        scheduleRetry(currentIndex, playToken);
-                    }
-                } else {
-                    stallCount = 0;
-                }
+                    if (stallCount === 1) { if (hls) { try { hls.startLoad(); } catch(e){} } }
+                    else if (stallCount >= 2) { stallCount = 0; failoverToNextVariant(); }
+                } else stallCount = 0;
                 lastTime = audio.currentTime;
             }, 5000);
         }
-        function stopWatchdog() {
-            if (stallTimer) { clearInterval(stallTimer); stallTimer = null; }
-        }
+        function stopWatchdog() { if (stallTimer) { clearInterval(stallTimer); stallTimer = null; } }
 
-        // ============ PLAY / STOP - EL CORAZÓN DEL ARREGLO ============
+        // ============ FIX 2: PLAY / STOP SIN TRAMPA ============
         function handlePlayTrigger(index) {
-            // Tocar la misma radio que suena (o que está conectando) = pausar
-            if (currentIndex === index && (!audio.paused || isConnecting)) {
-                stopStation();
+            if (currentIndex === index) {
+                const reallyPlaying = !audio.paused && !audio.ended;
+                if (reallyPlaying) { stopStation(); return; }
+                // Está pausado pero YA cargó (ej. play bloqueado por autoplay):
+                // el click debe RESUMIR, no parar.
+                if (hasLoadedSource) {
+                    const p = audio.play();
+                    if (p) p.catch(err => handlePlayBlocked(err));
+                    return;
+                }
+                // Está conectando y aún no cargó nada: segundo click = cancelar
+                if (isConnecting) { stopStation(); return; }
+                // Pausado sin fuente: reproducir de nuevo
+                playStation(index);
                 return;
             }
             playStation(index);
         }
 
-        function playStation(index) {
-            const myToken = ++playToken; // Invalida todo lo anterior: play(), reintentos, errores viejos
-            clearTimeout(retryTimer);
-            clearTimeout(connectTimeout);
-
-            // 1) Detener de verdad lo anterior ANTES de cargar lo nuevo
+        async function playStation(index) {
+            const myToken = ++playToken;
+            clearTimeout(retryTimer); clearTimeout(connectTimeout);
             if (hls) hls.stopLoad();
             audio.pause();
-            // NO hacemos audio.removeAttribute('src') + load() aquí cuando usamos Hls:
-            // eso disparaba 'error' y dejaba a Hls en estado inconsistente.
-
-            // 2) Nuevo estado
             currentIndex = index;
             isConnecting = true;
-            retryCount = 0;
-            lastTime = -1;
-            stallCount = 0;
-
+            hasLoadedSource = false;
+            variantList = []; variantIndex = 0;
+            lastTime = -1; stallCount = 0;
             setStatus(index, 'Conectando…');
             floatingStatus.textContent = 'Conectando…';
-            syncUI();
-            updateMediaSession(index);
+            syncUI(); updateMediaSession(index);
+            // Llamar play() ANTES del primer await: sigue dentro del gesto del click.
+            // Si aún no hay fuente fallará, pero desbloquea el elemento en algunos navegadores.
+            try { const p0 = audio.play(); if (p0) p0.catch(() => {}); } catch(e){}
 
-            // 3) Cargar SOLO esta radio, con URL limpia
+            // Resolver variantes (steering) antes de cargar
+            variantList = await getOrderedVariants(stations[index].url);
+            if (myToken !== playToken) return;
+
             if (hlsSupported()) {
-                ensureHls();
-                hls._token = myToken;
-                hls.loadSource(stations[index].url);
-            } else if (nativeHlsSupported()) {
-                // Safari iOS nativo
-                audio.src = stations[index].url;
-                audio.load();
-            } else {
-                setStatus(index, 'Navegador no compatible');
-                isConnecting = false;
+                for (variantIndex = 0; variantIndex < variantList.length; variantIndex++) {
+                    if (myToken !== playToken) return;
+                    setStatus(index, variantList.length > 1 ? `Conectando… (${variantIndex + 1}/${variantList.length})` : 'Conectando…');
+                    const ok = await loadOneVariant(variantList[variantIndex], myToken);
+                    if (myToken !== playToken) return;
+                    if (!ok) continue; // probar siguiente pathway
+                    hasLoadedSource = true;
+                    const p = audio.play();
+                    if (p) {
+                        try { await p; isConnecting = false; }
+                        catch (err) { handlePlayBlocked(err); return; }
+                    }
+                    armConnectTimeout(index, myToken);
+                    startWatchdog();
+                    return; // éxito, no probar más variantes
+                }
+                // Todas las variantes Hls.js fallaron -> nativo
+                await tryNativeFallback(index, myToken);
+                armConnectTimeout(index, myToken);
+                startWatchdog();
                 return;
             }
-
-            // 4) play() EN EL MISMO GESTO del clic. Esto es obligatorio en iOS.
-            // No esperar a MANIFEST_PARSED con await, si no iOS bloquea el audio.
-            const p = audio.play();
-            if (p) p.catch((err) => {
-                if (myToken !== playToken) return;
-                // Si aún no hay manifest, Hls lo reintentará en MANIFEST_PARSED.
-                // Solo si es bloqueo por autoplay mostramos aviso.
-                if (err && err.name === 'NotAllowedError') setStatus(index, 'Toca ▶ de nuevo');
-            });
-
-            armConnectTimeout(index, myToken);
-            startWatchdog();
+            if (nativeHlsSupported()) {
+                audio.src = stations[index].url;
+                audio.load();
+                const p = audio.play();
+                if (p) p.catch(err => handlePlayBlocked(err));
+                armConnectTimeout(index, myToken);
+                startWatchdog();
+                return;
+            }
+            setStatus(index, 'Navegador no compatible');
+            isConnecting = false;
         }
 
         function stopStation() {
-            playToken++; // Mata reintentos y errores pendientes de la radio anterior
-            clearTimeout(retryTimer);
-            clearTimeout(connectTimeout);
-            stopWatchdog();
-            isConnecting = false;
-
+            playToken++;
+            clearTimeout(retryTimer); clearTimeout(connectTimeout); stopWatchdog();
+            isConnecting = false; hasLoadedSource = false;
             if (hls) hls.stopLoad();
             audio.pause();
-            // En nativo sí limpiamos src, en Hls no hace falta y evita errores fantasma
-            if (!hlsSupported() && nativeHlsSupported()) {
-                audio.removeAttribute('src');
-                audio.load();
-            }
-
+            if (!hlsSupported() && nativeHlsSupported()) { audio.removeAttribute('src'); audio.load(); }
             if (currentIndex >= 0) setStatus(currentIndex, 'Pausado');
-            currentIndex = -1;
+            currentIndex = -1; variantList = []; variantIndex = 0;
             syncUI();
         }
 
-        // ============ EVENTOS DEL ÚNICO <audio> ============
         audio.addEventListener('playing', () => {
             if (currentIndex < 0) return;
-            isConnecting = false;
+            isConnecting = false; hasLoadedSource = true;
             clearTimeout(connectTimeout);
-            retryCount = 0;
-            setStatus(currentIndex, 'En vivo');
-            floatingStatus.textContent = 'En vivo';
-            syncUI();
-            updateMediaSession(currentIndex);
+            setStatus(currentIndex, 'En vivo'); floatingStatus.textContent = 'En vivo';
+            syncUI(); updateMediaSession(currentIndex);
         });
-
         audio.addEventListener('waiting', () => {
             if (currentIndex < 0 || audio.paused) return;
-            // Buffering normal, no recargar de inmediato
-            if (statusSpans[currentIndex].textContent === 'En vivo') {
-                setStatus(currentIndex, 'Cargando…');
-            }
+            if (statusSpans[currentIndex].textContent === 'En vivo') setStatus(currentIndex, 'Cargando…');
         });
-
-        audio.addEventListener('pause', () => {
-            // Pausa real (no la pausa interna al cambiar de radio, que ya hace syncUI)
-            if (currentIndex >= 0 && !isConnecting) syncUI();
+        audio.addEventListener('pause', () => { if (currentIndex >= 0 && !isConnecting) syncUI(); });
+        audio.addEventListener('canplay', () => {
+            // Si ya cargó pero play() fue bloqueado, no forzar; el usuario toca ▶ de nuevo.
+            // Este evento solo confirma que hay fuente.
+            if (currentIndex >= 0 && isConnecting) hasLoadedSource = true;
         });
-
         audio.addEventListener('error', () => {
             if (currentIndex < 0) return;
-            // Solo si Hls no lo está manejando ya. El watchdog / Hls ERROR lo cubre,
-            // pero en Safari nativo este es el único aviso.
-            if (!hlsSupported()) scheduleRetry(currentIndex, playToken);
+            if (!hlsSupported()) failoverToNextVariant();
         });
 
-        // 'stalled' ya no recarga de golpe: el watchdog lo confirma con 2 ciclos.
-        // Antes cada 'stalled' de cualquiera de los 12 audios disparaba reconnect.
-
-        // ============ MUTE GLOBAL (sin WebAudio) ============
-        // ANTES: createMediaElementSource + GainNode. En iOS, si el AudioContext
-        // quedaba suspendido, el audio se iba a un contexto mudo aunque dijera "En vivo".
-        // AHORA: audio.muted nativo, sin desviar el audio por WebAudio.
         function toggleMute() {
             isMuted = !isMuted;
             audio.muted = isMuted;
             audio.volume = isMuted ? 0 : 1;
-            muteBtns.forEach(btn => {
-                btn.classList.toggle('muted', isMuted);
-                btn.innerHTML = isMuted ? iconMute : iconVolHigh;
-            });
+            muteBtns.forEach(btn => { btn.classList.toggle('muted', isMuted); btn.innerHTML = isMuted ? iconMute : iconVolHigh; });
         }
-
-        // ============ UI ============
-        function setStatus(index, text) {
-            if (index >= 0 && statusSpans[index]) statusSpans[index].textContent = text;
-        }
-
+        function setStatus(index, text) { if (index >= 0 && statusSpans[index]) statusSpans[index].textContent = text; }
         function syncUI() {
             activeCards.forEach((card, idx) => {
                 const isCurrent = idx === currentIndex;
@@ -671,70 +504,31 @@
                 card.classList.toggle('playing', isPlaying);
                 card.classList.toggle('connecting', isConn);
                 playBtns[idx].innerHTML = isPlaying ? pauseIcon : playIcon;
-                if (!isPlaying && !isConn && isCurrent && statusSpans[idx].textContent === 'En vivo') {
-                    statusSpans[idx].textContent = 'Pausado';
-                }
+                if (!isPlaying && !isConn && isCurrent && statusSpans[idx].textContent === 'En vivo') statusSpans[idx].textContent = 'Pausado';
             });
-
             if (currentIndex >= 0) {
                 const isPlaying = !audio.paused && !audio.ended;
                 floatingLogo.src = stations[currentIndex].logo;
                 floatingTitle.textContent = stations[currentIndex].name;
-                floatingStatus.textContent = isPlaying ? 'En vivo' : (isConnecting ? 'Conectando…' : 'Pausado');
+                floatingStatus.textContent = isPlaying ? 'En vivo' : (isConnecting ? 'Conectando…' : (statusSpans[currentIndex] ? statusSpans[currentIndex].textContent : 'Pausado'));
                 floatingPlayBtn.innerHTML = isPlaying ? pauseIcon : playIcon;
                 floatingPlayer.classList.add('active');
-            } else {
-                floatingPlayer.classList.remove('active');
-            }
+            } else floatingPlayer.classList.remove('active');
         }
-
         function updateMediaSession(index) {
             if (!('mediaSession' in navigator)) return;
             const station = stations[index];
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: station.name,
-                artist: 'Radios Streaming - Guatemala',
-                album: 'Radios GUATE',
-                artwork: [
-                    { src: station.logo, sizes: '96x96', type: 'image/png' },
-                    { src: station.logo, sizes: '128x128', type: 'image/png' },
-                    { src: station.logo, sizes: '192x192', type: 'image/png' },
-                    { src: station.logo, sizes: '512x512', type: 'image/png' }
-                ]
-            });
+            navigator.mediaSession.metadata = new MediaMetadata({ title: station.name, artist: 'Radios Streaming - Guatemala', album: 'Radios GUATE', artwork: [{ src: station.logo, sizes: '96x96', type: 'image/png' }, { src: station.logo, sizes: '128x128', type: 'image/png' }, { src: station.logo, sizes: '192x192', type: 'image/png' }, { src: station.logo, sizes: '512x512', type: 'image/png' }] });
             navigator.mediaSession.setActionHandler('play', () => { if (currentIndex >= 0) playStation(currentIndex); });
             navigator.mediaSession.setActionHandler('pause', () => stopStation());
             navigator.mediaSession.setActionHandler('stop', () => stopStation());
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-                const next = currentIndex >= 0 ? (currentIndex + 1) % stations.length : 0;
-                playStation(next);
-            });
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-                const prev = currentIndex > 0 ? currentIndex - 1 : stations.length - 1;
-                playStation(prev);
-            });
+            navigator.mediaSession.setActionHandler('nexttrack', () => { const next = currentIndex >= 0 ? (currentIndex + 1) % stations.length : 0; playStation(next); });
+            navigator.mediaSession.setActionHandler('previoustrack', () => { const prev = currentIndex > 0 ? currentIndex - 1 : stations.length - 1; playStation(prev); });
         }
-
-        floatingPlayBtn.addEventListener('click', () => {
-            if (currentIndex >= 0) handlePlayTrigger(currentIndex);
-        });
-
-        document.getElementById('searchInput').addEventListener('input', e => {
-            const query = e.target.value.toLowerCase().trim();
-            activeCards.forEach((card, idx) => {
-                card.style.display = stations[idx].name.toLowerCase().includes(query) ? 'flex' : 'none';
-            });
-        });
-
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            stopStation();
-            location.reload();
-        });
-
-        // Si el usuario cierra / cambia de pestaña, no dejar Hls descargando en fondo
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && hls && currentIndex < 0) hls.stopLoad();
-        });
+        floatingPlayBtn.addEventListener('click', () => { if (currentIndex >= 0) handlePlayTrigger(currentIndex); });
+        document.getElementById('searchInput').addEventListener('input', e => { const query = e.target.value.toLowerCase().trim(); activeCards.forEach((card, idx) => { card.style.display = stations[idx].name.toLowerCase().includes(query) ? 'flex' : 'none'; }); });
+        document.getElementById('refreshBtn').addEventListener('click', () => { stopStation(); location.reload(); });
+        document.addEventListener('visibilitychange', () => { if (document.hidden && hls && currentIndex < 0) hls.stopLoad(); });
     </script>
 </body>
 </html>
